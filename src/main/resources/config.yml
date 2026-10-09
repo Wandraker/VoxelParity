@@ -1,0 +1,8 @@
+modules:
+  powder-snow:
+    enabled: true
+    max-movement-per-axis: 8.0
+    require-no-leather-boots: true
+    suppress-vanilla-warning: true
+debug:
+  log-decisions: false
