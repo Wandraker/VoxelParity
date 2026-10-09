@@ -42,7 +42,7 @@ class MotionResolverTest {
     }
 
     @Test
-    void permitsMovementOutOfExistingOverlap() {
+    void permitsMovementTowardNearestExitFromExistingOverlap() {
         Aabb start = new Aabb(0.0D, 0.0D, 0.0D, 0.6D, 1.8D, 0.6D);
         Aabb target = start.move(new Motion(-0.5D, 0.0D, 0.0D));
 
@@ -54,6 +54,21 @@ class MotionResolverTest {
 
         assertFalse(result.collided());
         assertEquals(-0.5D, result.motion().x(), EPSILON);
+    }
+
+    @Test
+    void blocksMovementDeeperThroughExistingOverlap() {
+        Aabb start = new Aabb(0.0D, 0.0D, 0.0D, 0.6D, 1.8D, 0.6D);
+        Aabb target = start.move(new Motion(1.0D, 0.0D, 0.0D));
+
+        ResolvedMotion result = MotionResolver.resolve(
+                start,
+                target,
+                List.of(new Aabb(0.4D, 0.0D, 0.0D, 0.8D, 1.0D, 0.6D))
+        );
+
+        assertTrue(result.collided());
+        assertEquals(0.0D, result.motion().x(), EPSILON);
     }
 
     @Test

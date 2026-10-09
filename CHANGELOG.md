@@ -7,9 +7,10 @@
 - Added per-player bamboo collision parity without changing Java player or mob collision.
 - Added per-player pointed-dripstone collision parity using the Paper 26.3 `Speleothem` API.
 - Added a normal-movement collision guard to prevent pass-through exploits after Java-side false-positive collision is bypassed.
+- Hardened existing-overlap handling so a player can escape a translated box but cannot tunnel through it in the opposite direction.
 - Added entity, unrelated-block and unloaded-chunk safety checks for failed-movement correction.
 - Added collision geometry and motion resolver unit tests.
-- Added a Java 25 GitHub Actions build.
+- Added a Java 25 GitHub Actions build with a downloadable plugin artifact.
 - Kept bamboo saplings outside the translated collision module until their Bedrock geometry is separately verified.
 - Updated the project version to `0.2.0-SNAPSHOT`.
 

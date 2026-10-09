@@ -41,6 +41,16 @@ public final class MotionResolver {
             if (!overlapsYZ(moving, obstacle)) {
                 continue;
             }
+
+            if (overlaps1D(moving.minX(), moving.maxX(), obstacle.minX(), obstacle.maxX())) {
+                result = restrictExistingOverlap(
+                        moving.minX(), moving.maxX(),
+                        obstacle.minX(), obstacle.maxX(),
+                        result
+                );
+                continue;
+            }
+
             if (result > 0.0D && moving.maxX() <= obstacle.minX()) {
                 result = Math.min(result, obstacle.minX() - moving.maxX());
             } else if (result < 0.0D && moving.minX() >= obstacle.maxX()) {
@@ -56,6 +66,16 @@ public final class MotionResolver {
             if (!overlapsXZ(moving, obstacle)) {
                 continue;
             }
+
+            if (overlaps1D(moving.minY(), moving.maxY(), obstacle.minY(), obstacle.maxY())) {
+                result = restrictExistingOverlap(
+                        moving.minY(), moving.maxY(),
+                        obstacle.minY(), obstacle.maxY(),
+                        result
+                );
+                continue;
+            }
+
             if (result > 0.0D && moving.maxY() <= obstacle.minY()) {
                 result = Math.min(result, obstacle.minY() - moving.maxY());
             } else if (result < 0.0D && moving.minY() >= obstacle.maxY()) {
@@ -71,6 +91,16 @@ public final class MotionResolver {
             if (!overlapsXY(moving, obstacle)) {
                 continue;
             }
+
+            if (overlaps1D(moving.minZ(), moving.maxZ(), obstacle.minZ(), obstacle.maxZ())) {
+                result = restrictExistingOverlap(
+                        moving.minZ(), moving.maxZ(),
+                        obstacle.minZ(), obstacle.maxZ(),
+                        result
+                );
+                continue;
+            }
+
             if (result > 0.0D && moving.maxZ() <= obstacle.minZ()) {
                 result = Math.min(result, obstacle.minZ() - moving.maxZ());
             } else if (result < 0.0D && moving.minZ() >= obstacle.maxZ()) {
@@ -78,6 +108,38 @@ public final class MotionResolver {
             }
         }
         return result;
+    }
+
+    private static double restrictExistingOverlap(
+            double movingMin,
+            double movingMax,
+            double obstacleMin,
+            double obstacleMax,
+            double amount
+    ) {
+        if (amount == 0.0D) {
+            return 0.0D;
+        }
+
+        double distanceToNegativeExit = movingMax - obstacleMin;
+        double distanceToPositiveExit = obstacleMax - movingMin;
+
+        if (amount < 0.0D && distanceToNegativeExit <= distanceToPositiveExit) {
+            return amount;
+        }
+        if (amount > 0.0D && distanceToPositiveExit <= distanceToNegativeExit) {
+            return amount;
+        }
+        return 0.0D;
+    }
+
+    private static boolean overlaps1D(
+            double aMin,
+            double aMax,
+            double bMin,
+            double bMax
+    ) {
+        return aMax > bMin && aMin < bMax;
     }
 
     private static boolean overlapsYZ(Aabb a, Aabb b) {
