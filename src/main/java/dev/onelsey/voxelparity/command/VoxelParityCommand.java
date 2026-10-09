@@ -2,6 +2,7 @@ package dev.onelsey.voxelparity.command;
 
 import dev.onelsey.voxelparity.VoxelParityPlugin;
 import dev.onelsey.voxelparity.bedrock.BedrockPlayerDetector;
+import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
 import dev.onelsey.voxelparity.module.ModuleManager;
 import dev.onelsey.voxelparity.movement.MovementModule;
@@ -108,6 +109,20 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
                             + ", blocked=" + module.blockedCandidates()
             );
         }
+
+        CollisionParityService collision = moduleManager.collisionParityService();
+        sender.sendMessage(
+                "bamboo: enabled=" + collision.bambooEnabled()
+                        + ", sharedAllowed=" + collision.allowedFailedMoves()
+                        + ", sharedCorrected=" + collision.correctedAcceptedMoves()
+                        + ", sharedBlocked=" + collision.blockedFailedCandidates()
+        );
+        sender.sendMessage(
+                "pointed-dripstone: enabled=" + collision.pointedDripstoneEnabled()
+                        + ", sharedAllowed=" + collision.allowedFailedMoves()
+                        + ", sharedCorrected=" + collision.correctedAcceptedMoves()
+                        + ", sharedBlocked=" + collision.blockedFailedCandidates()
+        );
     }
 
     private void reload(CommandSender sender) {

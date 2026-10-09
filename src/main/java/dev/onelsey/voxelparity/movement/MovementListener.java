@@ -1,17 +1,22 @@
 package dev.onelsey.voxelparity.movement;
 
 import dev.onelsey.voxelparity.bedrock.BedrockPlayerDetector;
+import dev.onelsey.voxelparity.collision.math.Aabb;
+import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
+import dev.onelsey.voxelparity.collision.paper.PaperBoxes;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
 import dev.onelsey.voxelparity.module.ModuleManager;
-import dev.onelsey.voxelparity.util.BoxMath;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
 import java.util.Objects;
+import java.util.Optional;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BoundingBox;
 
@@ -46,20 +51,19 @@ public final class MovementListener implements Listener {
 
         Location from = event.getFrom();
         Location to = event.getTo();
-        World fromWorld = from.getWorld();
-        if (fromWorld == null || !fromWorld.equals(to.getWorld())) {
+        if (!sameWorld(from, to)) {
             return;
         }
 
-        BoundingBox fromBox = BoxMath.playerBoxAt(player, from);
-        BoundingBox toBox = BoxMath.playerBoxAt(player, to);
+        BoundingBox fromBox = dev.onelsey.voxelparity.util.BoxMath.playerBoxAt(player, from);
+        BoundingBox toBox = dev.onelsey.voxelparity.util.BoxMath.playerBoxAt(player, to);
         FailMoveContext context = new FailMoveContext(
                 player,
                 from,
                 to,
                 fromBox,
                 toBox,
-                BoxMath.union(fromBox, toBox)
+                dev.onelsey.voxelparity.util.BoxMath.union(fromBox, toBox)
         );
 
         for (MovementModule module : moduleManager.modules()) {
@@ -68,17 +72,7 @@ public final class MovementListener implements Listener {
             }
 
             ModuleEvaluation evaluation = module.evaluate(context);
-            if (debugRegistry.isEnabled(player.getUniqueId())) {
-                plugin.getLogger().info(
-                        "[debug] player=" + player.getName()
-                                + " module=" + evaluation.moduleId()
-                                + " outcome=" + evaluation.outcome()
-                                + " reason=" + evaluation.reason()
-                                + " from=" + format(from)
-                                + " to=" + format(to)
-                );
-            }
-
+            logDecision(player, evaluation.moduleId(), evaluation.outcome().name(), evaluation.reason(), from, to);
             if (evaluation.outcome() == ModuleEvaluation.Outcome.ALLOW) {
                 event.setAllowed(true);
                 if (evaluation.suppressVanillaWarning()) {
@@ -87,6 +81,80 @@ public final class MovementListener implements Listener {
                 return;
             }
         }
+
+        Aabb target = PaperBoxes.playerAt(player, to);
+        CollisionParityService.FailedMoveDecision collisionDecision =
+                moduleManager.collisionParityService().evaluateFailedMove(player, target);
+        logDecision(
+                player,
+                "translated-collision",
+                collisionDecision.outcome().name(),
+                collisionDecision.reason(),
+                from,
+                to
+        );
+        if (collisionDecision.outcome() == CollisionParityService.FailedMoveDecision.Outcome.ALLOW) {
+            event.setAllowed(true);
+            event.setLogWarning(false);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onMove(PlayerMoveEvent event) {
+        if (event instanceof PlayerTeleportEvent
+                || !event.hasChangedPosition()
+                || !sameWorld(event.getFrom(), event.getTo())) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        if (!detector.isBedrockPlayer(player.getUniqueId())) {
+            return;
+        }
+
+        Optional<Location> corrected = moduleManager.collisionParityService().correctAcceptedMove(
+                player,
+                event.getFrom(),
+                event.getTo()
+        );
+        corrected.ifPresent(location -> {
+            if (debugRegistry.isEnabled(player.getUniqueId())) {
+                plugin.getLogger().info(
+                        "[debug] player=" + player.getName()
+                                + " module=translated-collision outcome=CORRECT"
+                                + " from=" + format(event.getFrom())
+                                + " requested=" + format(event.getTo())
+                                + " corrected=" + format(location)
+                );
+            }
+            event.setTo(location);
+        });
+    }
+
+    private void logDecision(
+            Player player,
+            String module,
+            String outcome,
+            String reason,
+            Location from,
+            Location to
+    ) {
+        if (!debugRegistry.isEnabled(player.getUniqueId())) {
+            return;
+        }
+        plugin.getLogger().info(
+                "[debug] player=" + player.getName()
+                        + " module=" + module
+                        + " outcome=" + outcome
+                        + " reason=" + reason
+                        + " from=" + format(from)
+                        + " to=" + format(to)
+        );
+    }
+
+    private static boolean sameWorld(Location from, Location to) {
+        World world = from.getWorld();
+        return world != null && world.equals(to.getWorld());
     }
 
     private static String format(Location location) {

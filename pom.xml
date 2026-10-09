@@ -6,14 +6,15 @@
 
     <groupId>dev.onelsey</groupId>
     <artifactId>voxelparity</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
     <name>VoxelParity</name>
     <description>Bedrock movement and collision parity fixes for modern Java Edition servers.</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
-        <paper.version>26.3.build.141-beta</paper.version>
+        <paper.version>26.3.build.136-beta</paper.version>
+        <junit.version>6.0.3</junit.version>
     </properties>
 
     <repositories>
@@ -29,6 +30,12 @@
             <artifactId>paper-api</artifactId>
             <version>${paper.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -48,6 +55,11 @@
                 <configuration>
                     <release>25</release>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
             </plugin>
         </plugins>
     </build>

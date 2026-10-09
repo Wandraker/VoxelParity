@@ -10,44 +10,55 @@ VoxelParity corrects specific Bedrock-to-Java movement and collision mismatches 
 - A module must be narrowly scoped to a reproducible edition mismatch.
 - VoxelParity does not globally replace vanilla collision shapes.
 - VoxelParity does not load chunks while validating movement.
-- A rejected movement packet is never allowed when an unrelated solid collision is present in the guarded volume.
-- Normal server authority remains the default. A module must positively prove that its own mismatch is relevant before bypassing a rejection.
+- A rejected movement packet is never allowed when an unrelated solid or entity collision is present.
+- A Java collision false positive is bypassed only when the translated Bedrock collision proves the target is valid.
+- Removing a Java false positive must not remove the Bedrock-side obstacle; accepted movement is clipped against translated boxes.
 
-## Layers
+## Bedrock detection
 
-### Bedrock detection
+`BedrockPlayerDetector` discovers Floodgate first and Geyser-Spigot second. The integration is reflective so VoxelParity does not package either API.
 
-`BedrockPlayerDetector` discovers Floodgate first and Geyser-Spigot second. The integration is reflective so VoxelParity does not need to package or hard-link either API into the plugin jar.
+## Failed movement
 
-### Movement gate
+`MovementListener` handles `PlayerFailMoveEvent.CLIPPED_INTO_BLOCK` for confirmed Bedrock players.
 
-`MovementListener` handles `PlayerFailMoveEvent` only when the server rejection reason is `CLIPPED_INTO_BLOCK` and the player is confirmed as Bedrock.
+Powder snow remains a dedicated failed-movement module because its mismatch is state-oriented rather than a simple translated box.
 
-The listener creates a `FailMoveContext` containing the requested movement and translated player bounding boxes. Enabled modules then evaluate the same context independently.
+Bamboo and pointed dripstone are handled by `CollisionParityService`. The target player box is evaluated against both the Java collision shape and the calculated Bedrock collision shape.
 
-### Modules
+A failed move is allowed only when:
 
-Each movement parity fix implements `MovementModule`.
+- a supported Java collision shape overlaps the target;
+- the corresponding Bedrock collision box does not overlap the target;
+- no unrelated collidable block overlaps the target;
+- no relevant entity collision overlaps the target;
+- no unloaded chunk is involved.
 
-A module can:
+## Accepted movement
 
-- abstain when the movement is unrelated;
-- mark a relevant candidate as blocked when a safety condition fails;
-- allow the rejected movement when the mismatch is positively identified.
+A per-player parity layer must also enforce Bedrock collision on movement that Java would otherwise accept.
 
-Modules expose counters for runtime testing.
+For Bedrock players, normal `PlayerMoveEvent` movement is checked against translated collision boxes inside the swept player bounds. `MotionResolver` clips movement axis-by-axis and returns the closest legal motion. Existing overlap is allowed to escape rather than trapping the player.
 
-### Powder snow
+Teleport events are excluded.
 
-The initial module treats powder snow as a candidate only when it appears in the swept player volume. The module refuses to bypass the rejection when another collidable block overlaps that swept volume, an unloaded chunk is touched, the movement is implausibly large, or leather boots should preserve Java collision behavior.
+## Geometry core
 
-## Next collision architecture
+The geometry and movement solver are independent from Bukkit:
 
-Bamboo and pointed dripstone require a stronger model than powder snow because the Bedrock client uses different position-dependent collision boxes.
+- `collision.math.Aabb`
+- `collision.math.Motion`
+- `collision.math.MotionResolver`
+- `collision.bedrock.BedrockOffsetPattern`
+- `collision.bedrock.BedrockBambooShape`
+- `collision.bedrock.BedrockDripstoneShape`
 
-The planned implementation has two halves:
+The Paper layer adapts Bukkit block data into those core types.
 
-1. Failed Java movement can be allowed only when the Java collision rejects the position but the calculated Bedrock collision does not.
-2. Normal movement must be clipped against the calculated Bedrock collision so removing the Java-side false positive cannot create a new pass-through exploit.
+## Bamboo scope
 
-The shared resolver for those modules will live outside platform-specific block adapters so additional parity modules can reuse it.
+Only `Material.BAMBOO` is translated in 0.2.0. `Material.BAMBOO_SAPLING` is intentionally excluded until its Bedrock geometry is independently measured and tested.
+
+## Pointed dripstone
+
+Paper 26.3 exposes pointed dripstone through the generalized `Speleothem` block-data interface. VoxelParity maps `TIP`, `TIP_MERGE`, `FRUSTUM`, `MIDDLE` and `BASE` to Bedrock-specific widths and respects the vertical direction for tip height.

@@ -1,4 +1,4 @@
-# VoxelParity 0.1.0-SNAPSHOT test plan
+# VoxelParity 0.2.0-SNAPSHOT test plan
 
 Target environment:
 
@@ -7,48 +7,89 @@ Target environment:
 - Leaf preferred
 - Geyser + Floodgate where available
 
+## Build gate
+
+1. GitHub Actions must pass on Java 25.
+2. All geometry and motion unit tests must pass.
+3. No license file should be added until a project license is selected.
+
 ## Baseline
 
 1. Start the server with VoxelParity installed.
 2. Run `/vp status` and confirm the Bedrock detector is Floodgate or Geyser.
-3. Run `/vp modules` and confirm `powder-snow: enabled=true`.
+3. Run `/vp modules` and confirm powder snow, bamboo and pointed dripstone are enabled.
 
 ## Java control
 
 1. Join with a Java client.
-2. Enter and leave powder snow without leather boots.
-3. Repeat with leather boots.
-4. Confirm VoxelParity does not log or alter Java movement.
+2. Walk through bamboo, pointed dripstone and powder snow.
+3. Confirm VoxelParity does not log, redirect or alter Java movement.
+4. Repeat with nearby mobs and confirm their collision remains vanilla.
 
-## Bedrock powder snow
+## Bedrock bamboo
 
 1. Join through Geyser with a Bedrock client.
-2. Run `/vp debug <player> on` from console or an operator account.
-3. Enter deep powder snow without leather boots.
-4. Attempt to move horizontally, sink, jump and escape.
-5. Reproduce the position-rubberband case if possible.
-6. Confirm that any corrected rejection logs `outcome=ALLOW` and `reason=powder-snow-only-collision-mismatch`.
-7. Confirm the player is not repeatedly teleported to the same rejected position.
+2. Enable `/vp debug <player> on`.
+3. Walk directly into multiple bamboo stalks from every side.
+4. Slide around bamboo corners.
+5. Walk through dense and vertically stacked bamboo.
+6. Confirm false Java rubberband is removed where the Bedrock client has legal space.
+7. Confirm the player cannot cross the calculated Bedrock stalk box.
+8. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.
 
-## Leather boots
+## Bedrock pointed dripstone
 
-1. Equip leather boots on the Bedrock player.
-2. Repeat the powder-snow test.
-3. Confirm VoxelParity does not bypass the movement rejection and debug shows `leather-boots-preserve-java-collision` when evaluated.
+Test each thickness where practical:
 
-## Wall safety
+- TIP
+- TIP_MERGE
+- FRUSTUM
+- MIDDLE
+- BASE
 
-1. Place powder snow immediately beside a full solid wall.
-2. Attempt movement toward or through the wall from the Bedrock client.
-3. Confirm VoxelParity does not allow a rejected move through the wall.
-4. Debug should show `non-powder-snow-collision-in-swept-volume` for a relevant candidate.
+For upward and hanging tips:
 
-## Unloaded chunk safety
+1. approach from all horizontal sides;
+2. move diagonally around the edge;
+3. jump into the tip region;
+4. fall or descend alongside hanging dripstone;
+5. confirm Java false-positive correction does not permit crossing the Bedrock box.
 
-1. Test near an unloaded chunk boundary without forcing the neighboring chunk to load.
-2. Confirm VoxelParity does not load the chunk itself.
-3. Confirm a candidate touching an unloaded chunk is blocked.
+## Powder snow
 
-## Metrics
+1. Enter deep powder snow without leather boots.
+2. Attempt horizontal movement, sinking, jumping and escaping.
+3. Reproduce the original position-rubberband case if possible.
+4. Confirm corrected rejections log `outcome=ALLOW` from the powder-snow module.
+5. Repeat with leather boots and confirm VoxelParity does not bypass the intended Java collision rule.
 
-Run `/vp modules` after testing and record the `allowed` and `blocked` counters together with the relevant server log excerpt.
+## Safety cases
+
+### Solid wall
+
+Place a translated block or powder snow directly beside a full solid wall. Attempt to use the parity correction to cross the wall. The move must remain blocked.
+
+### Entity collision
+
+Repeat a failed movement case while a collidable entity occupies the destination. The move must not be bypassed by translated collision parity.
+
+### Unloaded chunk
+
+Test near an unloaded chunk boundary. VoxelParity must not load the chunk itself and must not bypass a failed movement involving that unloaded area.
+
+### Large movement
+
+Use legitimate server mechanics or test tooling to create movement larger than the configured per-axis limit. VoxelParity must not use translated collision correction for that movement.
+
+## Evidence to keep
+
+For each failure or regression, keep:
+
+- VoxelParity version and commit SHA;
+- Leaf/Paper build;
+- Geyser and Floodgate versions;
+- Bedrock client version;
+- `/vp modules` counters;
+- relevant debug lines;
+- exact block coordinates and states;
+- a short video when geometry is visually ambiguous.

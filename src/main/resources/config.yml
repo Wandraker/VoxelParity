@@ -4,5 +4,11 @@ modules:
     max-movement-per-axis: 8.0
     require-no-leather-boots: true
     suppress-vanilla-warning: true
+  bamboo:
+    enabled: true
+  pointed-dripstone:
+    enabled: true
+collision:
+  max-movement-per-axis: 8.0
 debug:
   log-decisions: false

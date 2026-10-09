@@ -2,28 +2,27 @@
 
 VoxelParity is a Bedrock movement and collision parity plugin for modern Java Edition servers running through Geyser.
 
-The project is Leaf-first and targets Minecraft/Paper API 26.3 with Java 25. Paper, Purpur and Folia-compatible behavior is kept in mind where the API permits it.
+The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Java 25. Paper, Purpur and Folia-compatible behavior is kept in mind where the API permits it.
 
 ## Current state
 
-Version: `0.1.0-SNAPSHOT`
+Version: `0.2.0-SNAPSHOT`
 
 Implemented:
 
-- Bedrock-only movement correction through Floodgate or Geyser detection.
-- `powder-snow` module for `PlayerFailMoveEvent.CLIPPED_INTO_BLOCK` rubberband cases.
-- Conservative swept-volume collision validation before a rejected move can be allowed.
-- Leather boots preserve vanilla Java-side powder-snow collision behavior by default.
-- No chunk loads during validation.
-- Per-player debug logging.
-- Runtime counters for allowed and blocked candidate moves.
+- Bedrock-only handling through Floodgate or Geyser detection.
+- Powder-snow failed-movement correction.
+- Per-player bamboo collision parity.
+- Per-player pointed-dripstone collision parity.
+- Shared translated-collision resolver.
+- Normal movement clipping against Bedrock collision boxes to prevent pass-through exploits.
+- Failed Java movement is bypassed only when Java collision overlaps but the translated Bedrock collision does not.
+- Entity, unrelated block and unloaded-chunk safety gates.
+- Deterministic geometry and movement unit tests.
+- GitHub Actions build on Java 25.
+- Per-player debug logging and runtime counters.
 
-Planned next:
-
-- Bedrock bamboo collision parity.
-- Bedrock pointed dripstone collision parity.
-- Shared collision resolver for modules that need Bedrock-specific collision boxes.
-- More movement parity fixes backed by reproducible tests.
+VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics.
 
 ## Requirements
 
@@ -36,10 +35,10 @@ If Geyser runs on a proxy or another machine, Floodgate must be available on the
 ## Build
 
 ```text
-mvn clean package
+mvn clean verify
 ```
 
-The plugin jar will be created under `target/`.
+The plugin jar is created under `target/`.
 
 ## Commands
 
@@ -52,20 +51,20 @@ The plugin jar will be created under `target/`.
 
 Permission: `voxelparity.admin`
 
+## Collision model
+
+Bamboo and pointed dripstone use Bedrock-specific world-space collision boxes. VoxelParity applies those boxes only to Bedrock players.
+
+The translated collision layer works in both directions:
+
+1. When Java rejects a Bedrock move as clipped into a translated block, VoxelParity allows it only when the target no longer overlaps the Bedrock collision box and no unrelated collision is present.
+2. When Java accepts movement, VoxelParity clips the move against the Bedrock collision box so the parity fix cannot become a noclip path.
+
+`BAMBOO_SAPLING` is intentionally not translated. It is treated separately from mature bamboo until its Bedrock collision is independently verified.
+
 ## Powder snow safety model
 
-VoxelParity does not teleport a player every tick and does not globally alter block collision.
-
-The powder-snow module only considers movement that the server has already rejected as `CLIPPED_INTO_BLOCK`. It then requires all of the following before bypassing that rejection:
-
-- the player is identified as Bedrock;
-- powder snow occurs in the swept player volume;
-- the movement stays under the configured per-axis limit;
-- no unloaded chunk is touched;
-- no other collidable block overlaps the swept player volume;
-- leather boots are not equipped when the default safety option is enabled.
-
-Java players are never handled by the module.
+The powder-snow module only considers movement that the server has already rejected as `CLIPPED_INTO_BLOCK`. It requires powder snow in the swept player volume, loaded chunks, no unrelated collidable block and the configured leather-boots rule.
 
 ## License
 
