@@ -6,7 +6,7 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.4.0`
+Version: `0.4.1`
 
 Implemented:
 
@@ -25,7 +25,7 @@ Implemented:
 - Per-player debug logging, translated-collision geometry traces, powder-snow presence transitions, pose diagnostics, ordinary Java collision traces for swimming failures and per-module runtime counters.
 - Always-on bounded in-memory movement trace recorder for Bedrock players with asynchronous `/vp dump <player>` export.
 
-VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics. Spectator-mode players are hard-exempt from all parity movement handling. Swimming false-clip recovery is only allowed when an independent swept-volume scan finds no collidable Java shape, no powder snow and no unloaded chunk.
+VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics. Spectator-mode players are hard-exempt from all parity movement handling. Swimming false-clip recovery uses an independent Java collision scan plus axis-resolved path validation. A nearby corner inside the broad swept union is not treated as a collision by itself, while target overlap and actual wall-crossing remain blocked. Brief `isSwimming()` state that arrives before the server pose switches to `SWIMMING` is evaluated with a compact 0.6-block box without forcing the player's pose.
 
 ## Requirements
 
@@ -70,7 +70,7 @@ Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `a
 
 Bedrock spectator movement remains separate from normal collision parity. The assist listens to server-side movement input and only activates after the player makes too little progress for a short configurable window. It can assist forward, backward, strafing, jump and sneak directions, including pitch-aware forward/back movement.
 
-Each assist is a short bounded burst. Targets in unloaded chunks are never used, and residual velocity is cleared while assisting to reduce the acceleration spike observed after escaping a block.
+Each assist is a short bounded burst. After a plugin-assisted burst, VoxelParity observes several real client/server movement ticks before it is allowed to assist again, preventing its own teleports from being mistaken for another stall. Targets in unloaded chunks are never used, and residual velocity is cleared while assisting to reduce the acceleration spike observed after escaping a block.
 
 ## Movement trace recorder
 

@@ -86,7 +86,7 @@ Per-player debug mode includes movement-state probes. Powder-snow presence is lo
 
 Spectator behavior is intentionally separated from collision parity. A Bedrock player in `SPECTATOR` never enters the normal failed-movement or translated-collision correction paths.
 
-`SpectatorAssistService` consumes `PlayerInputEvent` state and tracks the player's actual progress on the entity scheduler. Normal client movement remains authoritative while progress is above the configured threshold. After a short stall, a bounded assist burst advances the player in the normalized requested direction. Forward/back movement respects camera pitch; strafe is yaw-relative; jump and sneak provide explicit vertical input.
+`SpectatorAssistService` consumes `PlayerInputEvent` state and tracks the player's actual progress on the entity scheduler. Normal client movement remains authoritative while progress is above the configured threshold. After a short stall, a bounded assist burst advances the player in the normalized requested direction. Forward/back movement respects camera pitch; strafe is yaw-relative; jump and sneak provide explicit vertical input. When a burst finishes, stall detection is suspended for a short observation window and the baseline is rebuilt from real post-teleport positions, so the plugin cannot interpret its own assisted steps as another stall.
 
 Assist targets are rejected when the target chunk is not already loaded. Assisted movement uses asynchronous teleport completion and clears velocity while assisting so a client-side acceleration spike is not carried out of an obstruction.
 
@@ -95,3 +95,12 @@ Assist targets are rejected when the target chunk is not already loaded. Assiste
 `MovementTraceRecorder` is an always-on diagnostic ring buffer for confirmed Bedrock players. It stores selected movement evidence such as failed moves, non-trivial parity decisions, pose transitions, spectator input changes and spectator-assist activation. Normal accepted movement packets are not recorded.
 
 Storage is bounded by `recorder.entries-per-player` and `recorder.max-players`. There is no continuous dump file and no continuous disk I/O. `/vp dump <player>` snapshots immutable trace entries and schedules the file write on Paper's async scheduler. The recorder buffers do not retain Player or world objects.
+
+
+## Swimming path validation
+
+Swimming false-clip recovery scans collidable Java boxes in the requested local volume but does not treat the axis-aligned union alone as proof of collision. Candidate boxes are passed through the same axis-resolved motion core used elsewhere in VoxelParity. The target must be free and the requested path must resolve without clipping.
+
+This distinction prevents a nearby diagonal corner from vetoing a legal move merely because it overlaps the rectangular union between two player boxes. Direct wall crossing and target overlap remain rejected.
+
+When Bukkit reports `Player.isSwimming()` before `Pose.SWIMMING` has landed, the module evaluates the request with a 0.6-block-high compact box anchored at the player's feet. This only affects failed-movement validation and does not set or spoof the player's pose.

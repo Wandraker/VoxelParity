@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1
+
+- Fixed spectator assist repeatedly retriggering itself after its own teleport steps.
+- Spectator assist now resets its movement baseline from the real post-teleport position and observes several client/server ticks before another stall can trigger.
+- Reduced the default spectator burst from five steps to three, reduced step distance to 0.20 blocks and reduced the sprint multiplier to make assisted exits smoother.
+- Preserved all-direction spectator support, including forward/backward, strafing, vertical movement and pitch-aware movement.
+- Reworked swimming false-clip safety from a broad swept-union collision boolean to detailed Java collision boxes plus axis-resolved path validation.
+- A solid corner merely touching the broad swept union no longer automatically blocks recovery when the requested swimming path itself is clear.
+- Real target overlap and wall-crossing remain rejected.
+- Added compact 0.6-block swimming-intent evaluation when Bukkit reports `isSwimming()` before the server pose has switched to `SWIMMING`.
+- The swimming-intent path does not force or spoof pose state.
+- Recorder evidence now includes the swimming flag and keeps Java target/path collision abstains.
+- Added regression tests for a swept-union corner false positive, wall crossing, target overlap and compact swimming-intent geometry.
+
 ## 0.4.0
 
 - Added Bedrock spectator movement assist as a separate path from normal collision parity.

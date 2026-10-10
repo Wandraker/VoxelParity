@@ -1,4 +1,4 @@
-# VoxelParity 0.4.0 test plan
+# VoxelParity 0.4.1 test plan
 
 Target environment:
 
@@ -78,10 +78,13 @@ For upward and hanging tips:
 
 1. Enable per-player debug.
 2. Reproduce the previously observed underwater Bedrock movement where Leaf repeatedly emits `CLIPPED_INTO_BLOCK`.
-3. Confirm genuinely clear swimming movement can produce `module=swimming-collision outcome=ALLOW reason=swimming-swept-volume-clear` instead of rubberbanding.
-4. Swim directly into a full solid wall and confirm the swimming module abstains with `java-collision-in-swept-volume`.
-5. Repeat beside powder snow and confirm the swimming module does not take ownership from the powder-snow module.
-6. Keep `[debug-java-collision]` lines for any remaining rejected swimming movement.
+3. Confirm genuinely clear swimming movement can produce `module=swimming-collision outcome=ALLOW reason=swimming-path-clear` instead of rubberbanding.
+4. Re-test the previously observed corner where 0.4.0 produced repeated `java-collision-in-swept-volume`; a free axis-resolved path should no longer be rejected only because the broad swept union touches the corner.
+5. Swim directly into a full solid wall and confirm the swimming module abstains with `java-target-collision` or `java-path-collision`.
+6. Start sprint-swimming and watch for a brief `STANDING` pose while `isSwimming()` is already true; the compact swimming-intent path may recover a false clip without forcing pose.
+7. Stop swimming in open water and confirm returning to `STANDING` remains normal.
+8. Repeat beside powder snow and confirm the swimming module does not take ownership from the powder-snow module.
+9. Keep `[debug-java-collision]` lines for any remaining rejected swimming movement.
 
 ## Spectator assist
 
@@ -89,11 +92,12 @@ For upward and hanging tips:
 2. Move normally in open air in every direction and confirm the assist does not constantly take over while client progress is healthy.
 3. Reproduce the previous Bedrock spectator stall against or inside a solid structure.
 4. Hold forward, backward, left, right, jump and sneak separately and confirm a stalled direction can trigger a short assist burst.
-5. Test diagonal combinations and forward movement while looking sharply up and down.
-6. Confirm leaving an obstruction does not produce the previous acceleration spike.
-7. Confirm assist never targets an unloaded chunk.
-8. Run `/vp modules` and confirm `spectator-assist` burst/step counters increase only when assistance actually activates.
-9. Confirm spectator movement still never enters powder-snow, swimming or translated-collision parity decisions.
+5. After an assist burst exits a block, keep holding the same input and confirm VoxelParity does not immediately start another burst every few ticks.
+6. Test diagonal combinations and forward movement while looking sharply up and down.
+7. Confirm leaving an obstruction does not produce the previous acceleration spike or a plugin-driven zigzag.
+8. Confirm assist never targets an unloaded chunk.
+9. Run `/vp modules` and confirm `spectator-assist` burst/step counters increase only when assistance actually activates.
+10. Confirm spectator movement still never enters powder-snow, swimming or translated-collision parity decisions.
 
 ## Safety cases
 

@@ -67,6 +67,7 @@ public final class MovementListener implements Listener {
                         + " to=" + format(event.getTo())
                         + " gameMode=" + player.getGameMode()
                         + " pose=" + player.getPose()
+                        + " swimmingFlag=" + player.isSwimming()
         );
         debugProbe.logFailMove(event);
 
@@ -104,7 +105,7 @@ public final class MovementListener implements Listener {
             ModuleEvaluation evaluation = module.evaluate(context);
             logDecision(player, evaluation.moduleId(), evaluation.outcome().name(), evaluation.reason(), from, to);
             if (evaluation.outcome() != ModuleEvaluation.Outcome.ABSTAIN
-                    || "java-collision-in-swept-volume".equals(evaluation.reason())) {
+                    || evaluation.reason().startsWith("java-")) {
                 traceRecorder.recordRateLimited(
                         player,
                         "DECISION_" + evaluation.moduleId(),
@@ -114,6 +115,7 @@ public final class MovementListener implements Listener {
                                 + " from=" + format(from)
                                 + " to=" + format(to)
                                 + " pose=" + player.getPose()
+                                + " swimmingFlag=" + player.isSwimming()
                 );
             }
             if (evaluation.outcome() == ModuleEvaluation.Outcome.ALLOW) {
@@ -311,6 +313,7 @@ public final class MovementListener implements Listener {
                 "current=" + player.getPose()
                         + " new=" + event.getPose()
                         + " gameMode=" + player.getGameMode()
+                        + " swimmingFlag=" + player.isSwimming()
                         + " pos=" + format(player.getLocation())
         );
         debugProbe.logPoseChange(player, event.getPose());

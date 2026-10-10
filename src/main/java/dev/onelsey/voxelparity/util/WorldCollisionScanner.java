@@ -1,5 +1,7 @@
 package dev.onelsey.voxelparity.util;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -13,32 +15,36 @@ public final class WorldCollisionScanner {
     }
 
     public static ScanResult scan(World world, BoundingBox sweptBox, Material specialMaterial) {
-        int minX = floor(sweptBox.getMinX());
-        int minY = Math.max(world.getMinHeight(), floor(sweptBox.getMinY()));
-        int minZ = floor(sweptBox.getMinZ());
-        int maxX = floor(Math.nextDown(sweptBox.getMaxX()));
-        int maxY = Math.min(world.getMaxHeight() - 1, floor(Math.nextDown(sweptBox.getMaxY())));
-        int maxZ = floor(Math.nextDown(sweptBox.getMaxZ()));
+        DetailedScan detailed = scanDetailed(world, sweptBox, specialMaterial);
+        return new ScanResult(
+                detailed.specialBlockEncountered(),
+                detailed.scanLimitExceeded() || !detailed.collisionBoxes().isEmpty(),
+                detailed.scanLimitExceeded() || detailed.unloadedChunkEncountered()
+        );
+    }
 
-        long volume = (long) (maxX - minX + 1)
-                * (long) (maxY - minY + 1)
-                * (long) (maxZ - minZ + 1);
-        if (volume <= 0L || volume > MAX_SCANNED_BLOCKS) {
-            return new ScanResult(false, true, true);
+    public static DetailedScan scanDetailed(
+            World world,
+            BoundingBox sweptBox,
+            Material specialMaterial
+    ) {
+        ScanRange range = ScanRange.from(world, sweptBox);
+        if (range.volume() <= 0L || range.volume() > MAX_SCANNED_BLOCKS) {
+            return new DetailedScan(false, false, true, List.of());
         }
 
         boolean specialBlockEncountered = false;
-        boolean otherCollisionEncountered = false;
         boolean unloadedChunkEncountered = false;
+        List<BoundingBox> collisionBoxes = new ArrayList<>();
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
+        for (int x = range.minX(); x <= range.maxX(); x++) {
+            for (int z = range.minZ(); z <= range.maxZ(); z++) {
                 if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                     unloadedChunkEncountered = true;
                     continue;
                 }
 
-                for (int y = minY; y <= maxY; y++) {
+                for (int y = range.minY(); y <= range.maxY(); y++) {
                     Block block = world.getBlockAt(x, y, z);
                     if (block.getType() == specialMaterial) {
                         specialBlockEncountered = true;
@@ -52,18 +58,18 @@ public final class WorldCollisionScanner {
                     for (BoundingBox localBox : block.getCollisionShape().getBoundingBoxes()) {
                         BoundingBox worldBox = BoxMath.translate(localBox, x, y, z);
                         if (BoxMath.strictlyOverlaps(worldBox, sweptBox, EPSILON)) {
-                            otherCollisionEncountered = true;
-                            break;
+                            collisionBoxes.add(worldBox);
                         }
                     }
                 }
             }
         }
 
-        return new ScanResult(
+        return new DetailedScan(
                 specialBlockEncountered,
-                otherCollisionEncountered,
-                unloadedChunkEncountered
+                unloadedChunkEncountered,
+                false,
+                List.copyOf(collisionBoxes)
         );
     }
 
@@ -76,5 +82,39 @@ public final class WorldCollisionScanner {
             boolean otherCollisionEncountered,
             boolean unloadedChunkEncountered
     ) {
+    }
+
+    public record DetailedScan(
+            boolean specialBlockEncountered,
+            boolean unloadedChunkEncountered,
+            boolean scanLimitExceeded,
+            List<BoundingBox> collisionBoxes
+    ) {
+    }
+
+    private record ScanRange(
+            int minX,
+            int minY,
+            int minZ,
+            int maxX,
+            int maxY,
+            int maxZ
+    ) {
+        private static ScanRange from(World world, BoundingBox box) {
+            return new ScanRange(
+                    floor(box.getMinX()),
+                    Math.max(world.getMinHeight(), floor(box.getMinY())),
+                    floor(box.getMinZ()),
+                    floor(Math.nextDown(box.getMaxX())),
+                    Math.min(world.getMaxHeight() - 1, floor(Math.nextDown(box.getMaxY()))),
+                    floor(Math.nextDown(box.getMaxZ()))
+            );
+        }
+
+        private long volume() {
+            return (long) (maxX - minX + 1)
+                    * (long) (maxY - minY + 1)
+                    * (long) (maxZ - minZ + 1);
+        }
     }
 }

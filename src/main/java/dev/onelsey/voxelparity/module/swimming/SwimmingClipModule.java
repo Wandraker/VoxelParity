@@ -1,16 +1,21 @@
 package dev.onelsey.voxelparity.module.swimming;
 
+import dev.onelsey.voxelparity.collision.math.Aabb;
+import dev.onelsey.voxelparity.collision.paper.PaperBoxes;
 import dev.onelsey.voxelparity.movement.FailMoveContext;
 import dev.onelsey.voxelparity.movement.ModuleEvaluation;
 import dev.onelsey.voxelparity.movement.MovementModule;
 import dev.onelsey.voxelparity.util.WorldCollisionScanner;
+import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Pose;
+import org.bukkit.util.BoundingBox;
 
 public final class SwimmingClipModule implements MovementModule {
     private static final String ID = "swimming-collision";
+    private static final double SWIMMING_HEIGHT = 0.6D;
 
     private final LongAdder allowedMoves = new LongAdder();
     private final LongAdder blockedCandidates = new LongAdder();
@@ -44,7 +49,9 @@ public final class SwimmingClipModule implements MovementModule {
 
     @Override
     public ModuleEvaluation evaluate(FailMoveContext context) {
-        if (context.player().getPose() != Pose.SWIMMING) {
+        boolean swimmingPose = context.player().getPose() == Pose.SWIMMING;
+        boolean swimmingIntent = context.player().isSwimming();
+        if (!swimmingPose && !swimmingIntent) {
             return ModuleEvaluation.abstain(ID, "player-not-swimming");
         }
 
@@ -57,31 +64,50 @@ public final class SwimmingClipModule implements MovementModule {
             return ModuleEvaluation.abstain(ID, "movement-exceeds-module-limit");
         }
 
-        WorldCollisionScanner.ScanResult scan = WorldCollisionScanner.scan(
+        Aabb start = PaperBoxes.fromPaper(context.fromBox());
+        Aabb target = PaperBoxes.fromPaper(context.toBox());
+        if (!swimmingPose && swimmingIntent) {
+            start = SwimmingPathGuard.compactAtFeet(start, SWIMMING_HEIGHT);
+            target = SwimmingPathGuard.compactAtFeet(target, SWIMMING_HEIGHT);
+        }
+
+        BoundingBox swept = PaperBoxes.toPaper(start.union(target));
+        WorldCollisionScanner.DetailedScan scan = WorldCollisionScanner.scanDetailed(
                 context.player().getWorld(),
-                context.sweptBox(),
+                swept,
                 Material.POWDER_SNOW
         );
 
-        if (!SwimmingClipGuard.canAllow(
-                scan.unloadedChunkEncountered(),
-                scan.specialBlockEncountered(),
-                scan.otherCollisionEncountered()
-        )) {
-            if (scan.unloadedChunkEncountered()) {
-                blockedCandidates.increment();
-                return ModuleEvaluation.blocked(ID, "unloaded-chunk-in-swept-volume");
-            }
-            if (scan.specialBlockEncountered()) {
-                return ModuleEvaluation.abstain(ID, "powder-snow-in-swept-volume");
-            }
-            return ModuleEvaluation.abstain(ID, "java-collision-in-swept-volume");
+        if (scan.scanLimitExceeded()) {
+            blockedCandidates.increment();
+            return ModuleEvaluation.blocked(ID, "scan-limit-exceeded");
+        }
+        if (scan.unloadedChunkEncountered()) {
+            blockedCandidates.increment();
+            return ModuleEvaluation.blocked(ID, "unloaded-chunk-in-swept-volume");
+        }
+        if (scan.specialBlockEncountered()) {
+            return ModuleEvaluation.abstain(ID, "powder-snow-in-swept-volume");
+        }
+
+        List<Aabb> obstacles = scan.collisionBoxes().stream()
+                .map(PaperBoxes::fromPaper)
+                .toList();
+
+        if (obstacles.stream().anyMatch(target::overlaps)) {
+            return ModuleEvaluation.abstain(ID, "java-target-collision");
+        }
+        if (!SwimmingPathGuard.canAllow(start, target, obstacles)) {
+            return ModuleEvaluation.abstain(ID, "java-path-collision");
         }
 
         allowedMoves.increment();
+        String reason = swimmingPose
+                ? "swimming-path-clear"
+                : "swimming-intent-compact-path-clear";
         return ModuleEvaluation.allow(
                 ID,
-                "swimming-swept-volume-clear",
+                reason,
                 suppressVanillaWarning
         );
     }

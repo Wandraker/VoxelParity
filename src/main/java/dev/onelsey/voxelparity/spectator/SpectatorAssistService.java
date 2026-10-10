@@ -37,11 +37,12 @@ public final class SpectatorAssistService implements Listener {
 
     private volatile boolean enabled = true;
     private volatile int stallTicks = 2;
-    private volatile int burstTicks = 5;
+    private volatile int burstTicks = 3;
+    private volatile int postAssistObserveTicks = 4;
     private volatile int idleTaskTicks = 20;
     private volatile double minimumProgress = 0.015D;
-    private volatile double step = 0.22D;
-    private volatile double sprintMultiplier = 1.35D;
+    private volatile double step = 0.20D;
+    private volatile double sprintMultiplier = 1.20D;
 
     public SpectatorAssistService(
             JavaPlugin plugin,
@@ -61,7 +62,12 @@ public final class SpectatorAssistService implements Listener {
                 10
         );
         burstTicks = clamp(
-                config.getInt("modules.spectator-assist.burst-ticks", 5),
+                config.getInt("modules.spectator-assist.burst-ticks", 3),
+                1,
+                20
+        );
+        postAssistObserveTicks = clamp(
+                config.getInt("modules.spectator-assist.post-assist-observe-ticks", 4),
                 1,
                 20
         );
@@ -76,12 +82,12 @@ public final class SpectatorAssistService implements Listener {
                 0.25D
         );
         step = clamp(
-                config.getDouble("modules.spectator-assist.step", 0.22D),
+                config.getDouble("modules.spectator-assist.step", 0.20D),
                 0.05D,
                 0.75D
         );
         sprintMultiplier = clamp(
-                config.getDouble("modules.spectator-assist.sprint-multiplier", 1.35D),
+                config.getDouble("modules.spectator-assist.sprint-multiplier", 1.20D),
                 1.0D,
                 2.5D
         );
@@ -200,6 +206,10 @@ public final class SpectatorAssistService implements Listener {
             return;
         }
 
+        if (state.teleportPending) {
+            return;
+        }
+
         SpectatorInputState input = state.input;
         Location current = player.getLocation();
 
@@ -207,6 +217,8 @@ public final class SpectatorAssistService implements Listener {
             state.idleTicks++;
             state.stalledTicks = 0;
             state.burstRemaining = 0;
+            state.observeTicksRemaining = 0;
+            state.resetObservationRequested = false;
             state.lastPosition = Position.from(current);
 
             if (state.wasAssisting) {
@@ -222,6 +234,20 @@ public final class SpectatorAssistService implements Listener {
         }
 
         state.idleTicks = 0;
+
+        if (state.resetObservationRequested) {
+            state.resetObservationRequested = false;
+            state.observeTicksRemaining = postAssistObserveTicks;
+            state.stalledTicks = 0;
+            state.lastPosition = Position.from(current);
+        }
+
+        if (state.observeTicksRemaining > 0) {
+            state.observeTicksRemaining--;
+            state.lastPosition = Position.from(current);
+            return;
+        }
+
         SpectatorAssistVector.Direction direction =
                 SpectatorAssistVector.direction(input, current.getYaw(), current.getPitch());
         if (direction.isZero()) {
@@ -229,14 +255,14 @@ public final class SpectatorAssistService implements Listener {
             return;
         }
 
-        Position previous = state.lastPosition;
-        if (previous == null || !previous.worldId.equals(current.getWorld().getUID())) {
-            state.lastPosition = Position.from(current);
-            return;
-        }
-
-        double progress = previous.progressToward(current, direction);
         if (state.burstRemaining <= 0) {
+            Position previous = state.lastPosition;
+            if (previous == null || !previous.worldId.equals(current.getWorld().getUID())) {
+                state.lastPosition = Position.from(current);
+                return;
+            }
+
+            double progress = previous.progressToward(current, direction);
             if (progress < minimumProgress) {
                 state.stalledTicks++;
             } else {
@@ -261,10 +287,6 @@ public final class SpectatorAssistService implements Listener {
             );
         }
 
-        if (state.teleportPending) {
-            return;
-        }
-
         double distance = step * (input.sprint() ? sprintMultiplier : 1.0D);
         Location target = current.clone().add(
                 direction.x() * distance,
@@ -274,6 +296,7 @@ public final class SpectatorAssistService implements Listener {
         World world = target.getWorld();
         if (world == null || !world.isChunkLoaded(target.getBlockX() >> 4, target.getBlockZ() >> 4)) {
             state.burstRemaining = 0;
+            state.stalledTicks = 0;
             state.lastPosition = Position.from(current);
             recorder.record(
                     player,
@@ -285,8 +308,8 @@ public final class SpectatorAssistService implements Listener {
 
         state.teleportPending = true;
         state.burstRemaining--;
+        boolean finishesBurst = state.burstRemaining <= 0;
         state.wasAssisting = true;
-        state.lastPosition = Position.from(target);
         player.setVelocity(new Vector(0.0D, 0.0D, 0.0D));
 
         player.teleportAsync(target, PlayerTeleportEvent.TeleportCause.PLUGIN)
@@ -294,6 +317,9 @@ public final class SpectatorAssistService implements Listener {
                     state.teleportPending = false;
                     if (failure == null && Boolean.TRUE.equals(success)) {
                         assistedSteps.increment();
+                    }
+                    if (finishesBurst) {
+                        state.resetObservationRequested = true;
                     }
                 });
     }
@@ -325,9 +351,11 @@ public final class SpectatorAssistService implements Listener {
         private volatile SpectatorInputState input = SpectatorInputState.idle();
         private volatile boolean cancelRequested;
         private volatile boolean teleportPending;
+        private volatile boolean resetObservationRequested;
         private Position lastPosition;
         private int stalledTicks;
         private int burstRemaining;
+        private int observeTicksRemaining;
         private int idleTicks;
         private boolean wasAssisting;
 
@@ -335,9 +363,11 @@ public final class SpectatorAssistService implements Listener {
             input = SpectatorInputState.idle();
             cancelRequested = false;
             teleportPending = false;
+            resetObservationRequested = false;
             lastPosition = null;
             stalledTicks = 0;
             burstRemaining = 0;
+            observeTicksRemaining = 0;
             idleTicks = 0;
             wasAssisting = false;
         }

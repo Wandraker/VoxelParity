@@ -11,11 +11,12 @@ modules:
   spectator-assist:
     enabled: true
     stall-ticks: 2
-    burst-ticks: 5
+    burst-ticks: 3
+    post-assist-observe-ticks: 4
     idle-task-ticks: 20
     minimum-progress: 0.015
-    step: 0.22
-    sprint-multiplier: 1.35
+    step: 0.20
+    sprint-multiplier: 1.20
   bamboo:
     enabled: true
   pointed-dripstone:
