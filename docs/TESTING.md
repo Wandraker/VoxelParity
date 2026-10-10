@@ -1,4 +1,4 @@
-# VoxelParity 0.2.1-SNAPSHOT test plan
+# VoxelParity 0.2.2-SNAPSHOT test plan
 
 Target environment:
 
@@ -30,11 +30,11 @@ Target environment:
 
 1. Join through Geyser with a Bedrock client.
 2. Enable `/vp debug <player> on`.
-3. Walk directly into multiple bamboo stalks from every side.
-4. Slide around bamboo corners.
-5. Walk through dense and vertically stacked bamboo.
-6. Confirm false Java rubberband is removed where the Bedrock client has legal space.
-7. Confirm the player cannot cross the calculated Bedrock stalk box.
+3. Test a tall `age=0` thin bamboo stalk from every side, including the previously reproducible catch case.
+4. Test an `age=1` thick bamboo stalk from every side.
+5. Slide around corners and then walk through dense and vertically stacked bamboo containing both ages.
+6. Confirm `age=0` no longer gets clipped against a `3/16` translated box and false Java rubberband is removed where the Bedrock client has legal space.
+7. Confirm the player cannot cross either the thin `2/16` or thick `3/16` calculated Bedrock stalk box.
 8. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.
 9. When mature bamboo still catches the player, keep the `[debug-geometry]` lines for that exact attempt. They include block coordinates, block data, Java collision boxes, the calculated Bedrock box and target overlap flags.
 

@@ -6,13 +6,13 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.2.1-SNAPSHOT`
+Version: `0.2.2-SNAPSHOT`
 
 Implemented:
 
 - Bedrock-only handling through Floodgate or Geyser detection.
 - Powder-snow failed-movement correction.
-- Per-player bamboo collision parity.
+- Per-player bamboo collision parity with Bedrock thin/thick stalk geometry selected from the Java bamboo age.
 - Per-player pointed-dripstone collision parity.
 - Shared translated-collision resolver.
 - Normal movement clipping against Bedrock collision boxes to prevent pass-through exploits.
@@ -60,7 +60,7 @@ The translated collision layer works in both directions:
 1. When Java rejects a Bedrock move as clipped into a translated block, VoxelParity allows it only when the target no longer overlaps the Bedrock collision box and no unrelated collision is present.
 2. When Java accepts movement, VoxelParity clips the move against the Bedrock collision box so the parity fix cannot become a noclip path.
 
-`BAMBOO_SAPLING` is intentionally not translated. It is treated separately from mature bamboo until its Bedrock collision is independently verified.
+Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `age=1` uses the thick stalk width of `3/16`. Both retain the deterministic Bedrock position offset. `BAMBOO_SAPLING` is intentionally not translated and remains a separate case.
 
 ## Powder snow safety model
 

@@ -57,7 +57,7 @@ The Paper layer adapts Bukkit block data into those core types.
 
 ## Bamboo scope
 
-Only `Material.BAMBOO` is translated in 0.2.0. `Material.BAMBOO_SAPLING` is intentionally excluded until its Bedrock geometry is independently measured and tested.
+`Material.BAMBOO` is translated state-aware. Java `age=0` maps to the Bedrock thin stalk width (`2/16`) and Java `age=1` maps to the Bedrock thick stalk width (`3/16`). Both use the same coordinate-derived Bedrock offset algorithm. `Material.BAMBOO_SAPLING` is intentionally excluded until its Bedrock geometry is independently measured and tested.
 
 ## Pointed dripstone
 

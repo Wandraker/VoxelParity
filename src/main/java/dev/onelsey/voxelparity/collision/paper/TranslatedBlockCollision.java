@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Bamboo;
 import org.bukkit.block.data.type.Speleothem;
 
 public final class TranslatedBlockCollision {
@@ -20,11 +21,18 @@ public final class TranslatedBlockCollision {
     }
 
     public Optional<Aabb> bedrockBox(Block block) {
+        BlockData data = block.getBlockData();
+
         if (bambooEnabled && block.getType() == Material.BAMBOO) {
+            if (!(data instanceof Bamboo bamboo)) {
+                return Optional.empty();
+            }
+
             return Optional.of(BedrockBambooShape.worldBox(
                     block.getX(),
                     block.getY(),
-                    block.getZ()
+                    block.getZ(),
+                    BedrockBambooShape.fromJavaAge(bamboo.getAge())
             ));
         }
 
@@ -32,7 +40,6 @@ public final class TranslatedBlockCollision {
             return Optional.empty();
         }
 
-        BlockData data = block.getBlockData();
         if (!(data instanceof Speleothem speleothem)) {
             return Optional.empty();
         }

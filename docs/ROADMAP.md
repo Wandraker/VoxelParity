@@ -2,11 +2,10 @@
 
 ## 0.2.x
 
-- Validate bamboo and pointed-dripstone parity on Leaf 26.3 with real Bedrock movement traces.
+- Validate state-aware thin/thick bamboo and pointed-dripstone parity on Leaf 26.3 with real Bedrock movement traces.
 - Validate corner sliding, vertical movement and stacked bamboo columns.
 - Measure `BAMBOO_SAPLING` separately before deciding whether it needs translation.
 - Split shared collision counters into per-block-module metrics.
-- Add runtime debug output for Java box versus Bedrock box when requested.
 
 ## 0.3.x
 

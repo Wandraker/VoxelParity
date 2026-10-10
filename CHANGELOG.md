@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2-SNAPSHOT
+
+- Fixed Bedrock collision geometry for thin Java bamboo states.
+- Java bamboo `age=0` now maps to the Bedrock thin stalk width of `2/16`.
+- Java bamboo `age=1` keeps the Bedrock thick stalk width of `3/16`.
+- Kept the existing deterministic Bedrock bamboo position offset for both stalk thicknesses.
+- Added unit coverage for thin/thick bamboo widths and Java age-to-thickness mapping.
+- Kept `BAMBOO_SAPLING` outside the translated collision module.
+- Updated the project version to `0.2.2-SNAPSHOT`.
+
 ## 0.2.1-SNAPSHOT
 
 - Added detailed translated-collision geometry diagnostics for runtime Bedrock testing.

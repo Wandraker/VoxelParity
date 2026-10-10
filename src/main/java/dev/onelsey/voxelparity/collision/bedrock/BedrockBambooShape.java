@@ -1,15 +1,25 @@
 package dev.onelsey.voxelparity.collision.bedrock;
 
 import dev.onelsey.voxelparity.collision.math.Aabb;
+import java.util.Objects;
 
 public final class BedrockBambooShape {
     private static final double FACE_EPSILON = 1.0D / 16384.0D;
-    private static final double WIDTH = 3.0D / 16.0D;
 
     private BedrockBambooShape() {
     }
 
-    public static Aabb worldBox(int x, int y, int z) {
+    public static Thickness fromJavaAge(int age) {
+        return switch (age) {
+            case 0 -> Thickness.THIN;
+            case 1 -> Thickness.THICK;
+            default -> throw new IllegalArgumentException("Unsupported Java bamboo age: " + age);
+        };
+    }
+
+    public static Aabb worldBox(int x, int y, int z, Thickness thickness) {
+        Objects.requireNonNull(thickness, "thickness");
+
         BedrockOffsetPattern.Offset offset =
                 BedrockOffsetPattern.sample(x, z, -0.25F, 0.25F, 16);
 
@@ -19,9 +29,24 @@ public final class BedrockBambooShape {
                 minX + FACE_EPSILON,
                 y,
                 minZ + FACE_EPSILON,
-                minX + WIDTH - FACE_EPSILON,
+                minX + thickness.width() - FACE_EPSILON,
                 y + 1.0D,
-                minZ + WIDTH - FACE_EPSILON
+                minZ + thickness.width() - FACE_EPSILON
         );
+    }
+
+    public enum Thickness {
+        THIN(2.0D / 16.0D),
+        THICK(3.0D / 16.0D);
+
+        private final double width;
+
+        Thickness(double width) {
+            this.width = width;
+        }
+
+        public double width() {
+            return width;
+        }
     }
 }
