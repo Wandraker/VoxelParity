@@ -42,6 +42,8 @@ For Bedrock players, normal `PlayerMoveEvent` movement gathers translated collis
 
 When the target itself overlaps translated collision, `MotionResolver` clips movement axis-by-axis and returns the closest legal motion. Existing overlap is allowed to escape rather than trapping the player.
 
+A real server-observed transition involving `Pose.SWIMMING` opens a short, location-bounded pose-transition window. While that window is active, a standing or sneaking target that overlaps translated collision is additionally evaluated as a 0.6-block-high compact target anchored at the same feet position. The compact path is accepted only when it is a strict subset of the normal target and is clear of translated collision. Failed-movement handling also requires the compact target to be clear of unrelated blocks, entities and unloaded chunks. This avoids fighting Geyser/Leaf crawl transitions without globally shrinking the player hitbox or forcing a pose.
+
 Teleport events are excluded.
 
 ## Geometry core
@@ -52,6 +54,7 @@ The geometry and movement solver are independent from Bukkit:
 - `collision.math.Motion`
 - `collision.math.MotionResolver`
 - `collision.math.AcceptedMoveGuard`
+- `collision.math.PoseAwareCollisionGuard`
 - `collision.bedrock.BedrockOffsetPattern`
 - `collision.bedrock.BedrockBambooShape`
 - `collision.bedrock.BedrockDripstoneShape`
@@ -69,4 +72,4 @@ Paper 26.3 exposes pointed dripstone through the generalized `Speleothem` block-
 
 ## Runtime diagnostics
 
-Per-player debug mode includes movement-state probes that do not alter collision decisions. Powder-snow presence is logged only when the tracked state changes, while pose-change and failed-movement events capture the server-side pose, bounding box and related movement state. These probes exist to distinguish a real collision mismatch from a server/client pose transition mismatch.
+Per-player debug mode includes movement-state probes. Powder-snow presence is logged only when the tracked state changes, while pose-change and failed-movement events capture the server-side pose, bounding box and related movement state. Pose-compatible collision decisions are emitted separately as `[debug-pose-collision]` so they can be distinguished from ordinary geometry corrections.

@@ -6,16 +6,16 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.2.4-SNAPSHOT`
+Version: `0.2.5-SNAPSHOT`
 
 Implemented:
 
 - Bedrock-only handling through Floodgate or Geyser detection.
 - Powder-snow failed-movement correction.
 - Per-player bamboo collision parity with Bedrock thin/thick stalk geometry selected from the Java bamboo age.
-- Per-player pointed-dripstone collision parity.
+- Per-player pointed-dripstone collision parity with recent swimming/crawl pose transition handling.
 - Shared translated-collision resolver.
-- Accepted Bedrock movement is corrected only when the reported target position actually ends inside a translated Bedrock collision box.
+- Accepted Bedrock movement is corrected only when the reported target position actually ends inside a translated Bedrock collision box, unless a recent server-observed swimming/crawl transition proves the compact player box is clear.
 - Failed Java movement is bypassed only when Java collision overlaps but the translated Bedrock collision does not.
 - Entity, unrelated block and unloaded-chunk safety gates.
 - Deterministic geometry and movement unit tests.
@@ -58,13 +58,13 @@ Bamboo and pointed dripstone use Bedrock-specific world-space collision boxes. V
 The translated collision layer works in both directions:
 
 1. When Java rejects a Bedrock move as clipped into a translated block, VoxelParity allows it only when the target no longer overlaps the Bedrock collision box and no unrelated collision is present.
-2. When Java accepts movement, VoxelParity corrects it only if the reported target player box itself overlaps a translated Bedrock collision box. A straight segment between two legal packet positions is not treated as proof of collision, which avoids false rubberbanding while sliding diagonally around thin blocks.
+2. When Java accepts movement, VoxelParity corrects it only if the reported target player box itself overlaps a translated Bedrock collision box. During a short, local grace window after a real server-observed `SWIMMING` pose transition, the same target is also checked with a 0.6-block-high compact box. If that compact box is clear, the movement is left untouched so the server/Geyser pose transition can complete instead of fighting the collision correction. A straight segment between two legal packet positions is not treated as proof of collision.
 
 Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `age=1` uses the thick stalk width of `3/16`. Both retain the deterministic Bedrock position offset. `BAMBOO_SAPLING` is intentionally not translated; live Bedrock testing confirmed the sapling remains pass-through for player movement.
 
 ## Powder snow safety model
 
-The powder-snow module only considers movement that the server has already rejected as `CLIPPED_INTO_BLOCK`. It requires powder snow in the swept player volume, loaded chunks, no unrelated collidable block and the configured leather-boots rule.
+The powder-snow module only considers movement that the server has already rejected as `CLIPPED_INTO_BLOCK`. It requires powder snow in the swept player volume, loaded chunks, no unrelated collidable block and the configured leather-boots rule. Live 0.2.4 testing showed normal Bedrock powder-snow traversal without any failed-movement event, so VoxelParity correctly stayed out of the way.
 
 ## License
 

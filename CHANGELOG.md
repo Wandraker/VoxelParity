@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.5-SNAPSHOT
+
+- Added pose-aware translated collision handling for Bedrock crawl/swimming transitions near hanging collision.
+- Tracks only real server-observed transitions involving the `SWIMMING` pose and keeps a short, local grace window around the transition point.
+- During that grace window, standing or sneaking targets that overlap translated collision are rechecked with a 0.6-block-high compact target box.
+- Failed movement can now be allowed when the normal target overlaps translated Bedrock collision but the compact target is clear of translated collision, unrelated blocks, entities and unloaded chunks.
+- Accepted movement no longer receives a translated-collision correction when the normal target overlaps but the recent compact pose target is clear.
+- Added dedicated pose-compatible counters and `[debug-pose-collision]` traces.
+- Added regression tests for the hanging pointed-dripstone runtime trace and lateral-collision safety.
+- Does not force, spoof or cancel player poses; Geyser/Leaf remains authoritative for the actual pose transition.
+- Preserved existing bamboo, pointed-dripstone geometry and powder-snow behavior.
+- Updated the project version to `0.2.5-SNAPSHOT`.
+
 ## 0.2.4-SNAPSHOT
 
 - Added non-invasive runtime diagnostics for powder snow and player pose transitions.

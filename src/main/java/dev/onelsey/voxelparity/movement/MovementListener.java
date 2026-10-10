@@ -31,6 +31,7 @@ public final class MovementListener implements Listener {
     private final DebugRegistry debugRegistry;
     private final ModuleManager moduleManager;
     private final MovementDebugProbe debugProbe;
+    private final PoseTransitionTracker poseTracker = new PoseTransitionTracker();
 
     public MovementListener(
             JavaPlugin plugin,
@@ -93,8 +94,13 @@ public final class MovementListener implements Listener {
 
         Aabb fromAabb = PaperBoxes.fromPaper(fromBox);
         Aabb target = PaperBoxes.fromPaper(toBox);
+        Optional<Aabb> compactTarget = poseTracker.compactTarget(player, to);
         CollisionParityService.FailedMoveDecision collisionDecision =
-                moduleManager.collisionParityService().evaluateFailedMove(player, target);
+                moduleManager.collisionParityService().evaluateFailedMove(
+                        player,
+                        target,
+                        compactTarget
+                );
         logDecision(
                 player,
                 "translated-collision",
@@ -103,6 +109,17 @@ public final class MovementListener implements Listener {
                 from,
                 to
         );
+
+        if (debugRegistry.isEnabled(player.getUniqueId())
+                && compactTarget.isPresent()
+                && "recent-swimming-target-clear".equals(collisionDecision.reason())) {
+            plugin.getLogger().info(
+                    "[debug-pose-collision] player=" + player.getName()
+                            + " phase=FAIL_MOVE_ALLOW"
+                            + " normalTarget=" + format(target)
+                            + " compactTarget=" + format(compactTarget.get())
+            );
+        }
 
         if (debugRegistry.isEnabled(player.getUniqueId())
                 && collisionDecision.outcome() != CollisionParityService.FailedMoveDecision.Outcome.ABSTAIN) {
@@ -143,41 +160,61 @@ public final class MovementListener implements Listener {
         Aabb requestedTarget = PaperBoxes.playerAt(player, event.getTo());
         debugProbe.observeMove(player, requestedTarget);
 
-        Optional<Location> corrected = moduleManager.collisionParityService().correctAcceptedMove(
-                player,
-                event.getFrom(),
-                event.getTo()
-        );
-        corrected.ifPresent(location -> {
-            if (debugRegistry.isEnabled(player.getUniqueId())) {
-                Aabb correctedTarget = PaperBoxes.playerAt(player, location);
-                plugin.getLogger().info(
-                        "[debug] player=" + player.getName()
-                                + " module=translated-collision outcome=CORRECT"
-                                + " from=" + format(event.getFrom())
-                                + " requested=" + format(event.getTo())
-                                + " corrected=" + format(location)
-                                + " " + debugProbe.describePlayerState(player)
-                );
-                logCollisionDiagnostics(
+        Optional<Aabb> compactTarget = poseTracker.compactTarget(player, event.getTo());
+        CollisionParityService.AcceptedMoveDecision decision =
+                moduleManager.collisionParityService().evaluateAcceptedMove(
                         player,
-                        "MOVE_CORRECT",
-                        start,
-                        requestedTarget,
-                        start.union(requestedTarget),
-                        moduleManager.collisionParityService().diagnostics(
-                                player,
-                                start.union(requestedTarget),
-                                requestedTarget
-                        )
+                        event.getFrom(),
+                        event.getTo(),
+                        compactTarget
                 );
+
+        if (decision.outcome() == CollisionParityService.AcceptedMoveDecision.Outcome.POSE_COMPATIBLE) {
+            if (debugRegistry.isEnabled(player.getUniqueId())) {
                 plugin.getLogger().info(
-                        "[debug-geometry] player=" + player.getName()
-                                + " phase=MOVE_CORRECT correctedTarget=" + format(correctedTarget)
+                        "[debug-pose-collision] player=" + player.getName()
+                                + " phase=MOVE_ACCEPT"
+                                + " reason=" + decision.reason()
+                                + " normalTarget=" + format(requestedTarget)
+                                + " compactTarget=" + format(decision.compactTarget().orElseThrow())
                 );
             }
-            event.setTo(location);
-        });
+            return;
+        }
+
+        if (decision.outcome() != CollisionParityService.AcceptedMoveDecision.Outcome.CORRECT) {
+            return;
+        }
+
+        Location correctedLocation = decision.correctedLocation().orElseThrow();
+        if (debugRegistry.isEnabled(player.getUniqueId())) {
+            Aabb correctedTarget = PaperBoxes.playerAt(player, correctedLocation);
+            plugin.getLogger().info(
+                    "[debug] player=" + player.getName()
+                            + " module=translated-collision outcome=CORRECT"
+                            + " from=" + format(event.getFrom())
+                            + " requested=" + format(event.getTo())
+                            + " corrected=" + format(correctedLocation)
+                            + " " + debugProbe.describePlayerState(player)
+            );
+            logCollisionDiagnostics(
+                    player,
+                    "MOVE_CORRECT",
+                    start,
+                    requestedTarget,
+                    start.union(requestedTarget),
+                    moduleManager.collisionParityService().diagnostics(
+                            player,
+                            start.union(requestedTarget),
+                            requestedTarget
+                    )
+            );
+            plugin.getLogger().info(
+                    "[debug-geometry] player=" + player.getName()
+                            + " phase=MOVE_CORRECT correctedTarget=" + format(correctedTarget)
+            );
+        }
+        event.setTo(correctedLocation);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -188,12 +225,15 @@ public final class MovementListener implements Listener {
         if (!detector.isBedrockPlayer(player.getUniqueId())) {
             return;
         }
+
+        poseTracker.observePoseChange(player, event.getPose());
         debugProbe.logPoseChange(player, event.getPose());
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         debugProbe.clear(event.getPlayer().getUniqueId());
+        poseTracker.clear(event.getPlayer().getUniqueId());
     }
 
     private void logCollisionDiagnostics(

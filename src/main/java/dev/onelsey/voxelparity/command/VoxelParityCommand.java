@@ -115,12 +115,16 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
                 "bamboo: enabled=" + collision.bambooEnabled()
                         + ", sharedAllowed=" + collision.allowedFailedMoves()
                         + ", sharedCorrected=" + collision.correctedAcceptedMoves()
+                        + ", poseAccepted=" + collision.poseCompatibleAcceptedMoves()
+                        + ", poseFailedAllowed=" + collision.poseCompatibleFailedMoves()
                         + ", sharedBlocked=" + collision.blockedFailedCandidates()
         );
         sender.sendMessage(
                 "pointed-dripstone: enabled=" + collision.pointedDripstoneEnabled()
                         + ", sharedAllowed=" + collision.allowedFailedMoves()
                         + ", sharedCorrected=" + collision.correctedAcceptedMoves()
+                        + ", poseAccepted=" + collision.poseCompatibleAcceptedMoves()
+                        + ", poseFailedAllowed=" + collision.poseCompatibleFailedMoves()
                         + ", sharedBlocked=" + collision.blockedFailedCandidates()
         );
     }

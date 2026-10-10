@@ -1,4 +1,4 @@
-# VoxelParity 0.2.4-SNAPSHOT test plan
+# VoxelParity 0.2.5-SNAPSHOT test plan
 
 Target environment:
 
@@ -41,7 +41,7 @@ Target environment:
 
 ## Bedrock pointed dripstone
 
-With debug enabled, keep any `[debug-pose]` lines if the player enters a crawl/swim-like pose under hanging dripstone. The line must show the current/new pose and the server-side player bounding box.
+With debug enabled, keep `[debug-pose]` and `[debug-pose-collision]` lines if the player enters a crawl/swim-like pose under hanging dripstone. VoxelParity must not force a pose. The server/Geyser pose event remains authoritative.
 
 Test each thickness where practical:
 
@@ -58,7 +58,10 @@ For upward and hanging tips:
 3. jump into the tip region;
 4. fall or descend alongside hanging dripstone;
 5. confirm Java false-positive correction does not permit ending inside the Bedrock box;
-6. repeatedly pass diagonally between nearby dripstone shapes and confirm no `MOVE_CORRECT` occurs when the target is free.
+6. repeatedly pass diagonally between nearby dripstone shapes and confirm no `MOVE_CORRECT` occurs when the target is free;
+7. reproduce the hanging-tip crawl case and confirm a recent `SWIMMING` transition can produce `[debug-pose-collision] ... recent-swimming-target-clear` instead of repeated standing-box correction;
+8. confirm the compact pose path does not allow movement through the side of a pointed-dripstone box or through unrelated solid/entity collision;
+9. wait more than the short transition grace period and confirm ordinary standing collision enforcement resumes.
 
 ## Powder snow
 

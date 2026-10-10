@@ -6,7 +6,7 @@
 
     <groupId>dev.onelsey</groupId>
     <artifactId>voxelparity</artifactId>
-    <version>0.2.4-SNAPSHOT</version>
+    <version>0.2.5-SNAPSHOT</version>
     <name>VoxelParity</name>
     <description>Bedrock movement and collision parity fixes for modern Java Edition servers.</description>
 
