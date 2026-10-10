@@ -170,7 +170,7 @@ public final class MovementListener implements Listener {
                 );
 
         if (decision.outcome() == CollisionParityService.AcceptedMoveDecision.Outcome.POSE_COMPATIBLE) {
-            if (debugRegistry.isEnabled(player.getUniqueId())) {
+            if (debugProbe.shouldLogPoseMoveAccept(player)) {
                 plugin.getLogger().info(
                         "[debug-pose-collision] player=" + player.getName()
                                 + " phase=MOVE_ACCEPT"
@@ -257,6 +257,7 @@ public final class MovementListener implements Listener {
             plugin.getLogger().info(
                     "[debug-geometry] player=" + player.getName()
                             + " phase=" + phase
+                            + " kind=" + diagnostic.kind().id()
                             + " block=" + diagnostic.material()
                             + " pos=" + diagnostic.x() + "," + diagnostic.y() + "," + diagnostic.z()
                             + " data=" + diagnostic.blockData()

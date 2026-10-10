@@ -3,8 +3,10 @@ package dev.onelsey.voxelparity.collision.paper;
 import dev.onelsey.voxelparity.collision.math.Aabb;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EnderCrystal;
@@ -24,8 +26,10 @@ public final class CollisionWorld {
             TranslatedBlockCollision translated
     ) {
         World world = player.getWorld();
-        boolean javaTranslatedOverlap = false;
-        boolean bedrockTranslatedOverlap = false;
+        EnumSet<TranslatedCollisionKind> javaTranslatedKinds =
+                EnumSet.noneOf(TranslatedCollisionKind.class);
+        EnumSet<TranslatedCollisionKind> bedrockTranslatedKinds =
+                EnumSet.noneOf(TranslatedCollisionKind.class);
         boolean otherBlockCollision = false;
         boolean unloadedChunk = false;
 
@@ -39,10 +43,15 @@ public final class CollisionWorld {
 
                 for (int y = range.minY(); y <= range.maxY(); y++) {
                     Block block = world.getBlockAt(x, y, z);
-                    Optional<Aabb> bedrock = translated.bedrockBox(block);
-                    if (bedrock.isPresent()) {
-                        javaTranslatedOverlap |= javaShapeOverlaps(block, target);
-                        bedrockTranslatedOverlap |= bedrock.get().overlaps(target);
+                    Optional<TranslatedCollision> translation = translated.translation(block);
+                    if (translation.isPresent()) {
+                        TranslatedCollision collision = translation.get();
+                        if (javaShapeOverlaps(block, target)) {
+                            javaTranslatedKinds.add(collision.kind());
+                        }
+                        if (collision.box().overlaps(target)) {
+                            bedrockTranslatedKinds.add(collision.kind());
+                        }
                     } else if (block.isCollidable() && javaShapeOverlaps(block, target)) {
                         otherBlockCollision = true;
                     }
@@ -56,8 +65,8 @@ public final class CollisionWorld {
         ).isEmpty();
 
         return new TargetScan(
-                javaTranslatedOverlap,
-                bedrockTranslatedOverlap,
+                Set.copyOf(javaTranslatedKinds),
+                Set.copyOf(bedrockTranslatedKinds),
                 otherBlockCollision,
                 entityCollision,
                 unloadedChunk
@@ -69,7 +78,7 @@ public final class CollisionWorld {
             Aabb bounds,
             TranslatedBlockCollision translated
     ) {
-        List<Aabb> boxes = new ArrayList<>();
+        List<TranslatedCollision> collisions = new ArrayList<>();
         boolean unloadedChunk = false;
 
         BlockRange range = BlockRange.from(world, bounds);
@@ -81,12 +90,12 @@ public final class CollisionWorld {
                 }
 
                 for (int y = range.minY(); y <= range.maxY(); y++) {
-                    translated.bedrockBox(world.getBlockAt(x, y, z)).ifPresent(boxes::add);
+                    translated.translation(world.getBlockAt(x, y, z)).ifPresent(collisions::add);
                 }
             }
         }
 
-        return new CollisionBoxes(List.copyOf(boxes), unloadedChunk);
+        return new CollisionBoxes(List.copyOf(collisions), unloadedChunk);
     }
 
     public static List<TranslatedCollisionDiagnostic> translatedDiagnostics(
@@ -106,23 +115,25 @@ public final class CollisionWorld {
 
                 for (int y = range.minY(); y <= range.maxY(); y++) {
                     Block block = world.getBlockAt(x, y, z);
-                    Optional<Aabb> bedrock = translated.bedrockBox(block);
-                    if (bedrock.isEmpty()) {
+                    Optional<TranslatedCollision> translation = translated.translation(block);
+                    if (translation.isEmpty()) {
                         continue;
                     }
 
+                    TranslatedCollision collision = translation.get();
                     List<Aabb> javaBoxes = javaShapeBoxes(block);
                     boolean javaTargetOverlap = javaBoxes.stream().anyMatch(target::overlaps);
-                    boolean bedrockTargetOverlap = bedrock.get().overlaps(target);
+                    boolean bedrockTargetOverlap = collision.box().overlaps(target);
 
                     diagnostics.add(new TranslatedCollisionDiagnostic(
+                            collision.kind(),
                             block.getType().name(),
                             block.getX(),
                             block.getY(),
                             block.getZ(),
                             block.getBlockData().getAsString(),
                             javaBoxes,
-                            bedrock.get(),
+                            collision.box(),
                             javaTargetOverlap,
                             bedrockTargetOverlap
                     ));
@@ -174,18 +185,51 @@ public final class CollisionWorld {
     }
 
     public record TargetScan(
-            boolean javaTranslatedOverlap,
-            boolean bedrockTranslatedOverlap,
+            Set<TranslatedCollisionKind> javaTranslatedKinds,
+            Set<TranslatedCollisionKind> bedrockTranslatedKinds,
             boolean otherBlockCollision,
             boolean entityCollision,
             boolean unloadedChunk
     ) {
+        public boolean javaTranslatedOverlap() {
+            return !javaTranslatedKinds.isEmpty();
+        }
+
+        public boolean bedrockTranslatedOverlap() {
+            return !bedrockTranslatedKinds.isEmpty();
+        }
+
+        public Set<TranslatedCollisionKind> relevantKinds() {
+            EnumSet<TranslatedCollisionKind> kinds =
+                    EnumSet.noneOf(TranslatedCollisionKind.class);
+            kinds.addAll(javaTranslatedKinds);
+            kinds.addAll(bedrockTranslatedKinds);
+            return Set.copyOf(kinds);
+        }
     }
 
-    public record CollisionBoxes(List<Aabb> boxes, boolean unloadedChunk) {
+    public record CollisionBoxes(
+            List<TranslatedCollision> collisions,
+            boolean unloadedChunk
+    ) {
+        public List<Aabb> boxes() {
+            return collisions.stream().map(TranslatedCollision::box).toList();
+        }
+
+        public Set<TranslatedCollisionKind> kindsOverlapping(Aabb target) {
+            EnumSet<TranslatedCollisionKind> kinds =
+                    EnumSet.noneOf(TranslatedCollisionKind.class);
+            for (TranslatedCollision collision : collisions) {
+                if (collision.box().overlaps(target)) {
+                    kinds.add(collision.kind());
+                }
+            }
+            return Set.copyOf(kinds);
+        }
     }
 
     public record TranslatedCollisionDiagnostic(
+            TranslatedCollisionKind kind,
             String material,
             int x,
             int y,

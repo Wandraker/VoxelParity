@@ -2,7 +2,6 @@ package dev.onelsey.voxelparity.collision.paper;
 
 import dev.onelsey.voxelparity.collision.bedrock.BedrockBambooShape;
 import dev.onelsey.voxelparity.collision.bedrock.BedrockDripstoneShape;
-import dev.onelsey.voxelparity.collision.math.Aabb;
 import java.util.Optional;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -20,7 +19,7 @@ public final class TranslatedBlockCollision {
         this.pointedDripstoneEnabled = pointedDripstoneEnabled;
     }
 
-    public Optional<Aabb> bedrockBox(Block block) {
+    public Optional<TranslatedCollision> translation(Block block) {
         BlockData data = block.getBlockData();
 
         if (bambooEnabled && block.getType() == Material.BAMBOO) {
@@ -28,11 +27,14 @@ public final class TranslatedBlockCollision {
                 return Optional.empty();
             }
 
-            return Optional.of(BedrockBambooShape.worldBox(
-                    block.getX(),
-                    block.getY(),
-                    block.getZ(),
-                    BedrockBambooShape.fromJavaAge(bamboo.getAge())
+            return Optional.of(new TranslatedCollision(
+                    TranslatedCollisionKind.BAMBOO,
+                    BedrockBambooShape.worldBox(
+                            block.getX(),
+                            block.getY(),
+                            block.getZ(),
+                            BedrockBambooShape.fromJavaAge(bamboo.getAge())
+                    )
             ));
         }
 
@@ -53,13 +55,23 @@ public final class TranslatedBlockCollision {
         };
 
         boolean hanging = speleothem.getVerticalDirection() == BlockFace.DOWN;
-        return Optional.of(BedrockDripstoneShape.worldBox(
-                block.getX(),
-                block.getY(),
-                block.getZ(),
-                thickness,
-                hanging
+        return Optional.of(new TranslatedCollision(
+                TranslatedCollisionKind.POINTED_DRIPSTONE,
+                BedrockDripstoneShape.worldBox(
+                        block.getX(),
+                        block.getY(),
+                        block.getZ(),
+                        thickness,
+                        hanging
+                )
         ));
+    }
+
+    public boolean enabled(TranslatedCollisionKind kind) {
+        return switch (kind) {
+            case BAMBOO -> bambooEnabled;
+            case POINTED_DRIPSTONE -> pointedDripstoneEnabled;
+        };
     }
 
     public boolean bambooEnabled() {

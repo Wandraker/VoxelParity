@@ -18,7 +18,10 @@ import org.bukkit.util.BoundingBox;
 public final class MovementDebugProbe {
     private final JavaPlugin plugin;
     private final DebugRegistry debugRegistry;
+    private static final long POSE_MOVE_ACCEPT_LOG_INTERVAL_NANOS = 250_000_000L;
+
     private final Map<UUID, Boolean> powderSnowPresence = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastPoseMoveAcceptLog = new ConcurrentHashMap<>();
 
     public MovementDebugProbe(JavaPlugin plugin, DebugRegistry debugRegistry) {
         this.plugin = plugin;
@@ -124,6 +127,22 @@ public final class MovementDebugProbe {
         );
     }
 
+    public boolean shouldLogPoseMoveAccept(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (!debugRegistry.isEnabled(uuid)) {
+            return false;
+        }
+
+        long now = System.nanoTime();
+        Long previous = lastPoseMoveAcceptLog.get(uuid);
+        if (previous != null && now - previous < POSE_MOVE_ACCEPT_LOG_INTERVAL_NANOS) {
+            return false;
+        }
+
+        lastPoseMoveAcceptLog.put(uuid, now);
+        return true;
+    }
+
     public String describePlayerState(Player player) {
         BoundingBox box = player.getBoundingBox();
         return "pose=" + player.getPose()
@@ -141,6 +160,7 @@ public final class MovementDebugProbe {
 
     public void clear(UUID uuid) {
         powderSnowPresence.remove(uuid);
+        lastPoseMoveAcceptLog.remove(uuid);
     }
 
     private static boolean hasLeatherBoots(Player player) {

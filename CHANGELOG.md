@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.6
+
+- Split translated-collision metrics into independent bamboo and pointed-dripstone counters.
+- Added explicit translated-collision kinds so diagnostics and metrics no longer depend on shared anonymous boxes.
+- Reduced repeated pose-compatible accepted-movement debug spam while keeping failed-movement and pose-transition evidence intact.
+- Added dedicated runtime regression fixtures based on real Bedrock/Geyser traces for the false corner-correction case and hanging-dripstone compact-pose case.
+- Added unit coverage for per-module metric separation.
+- Preserved the 0.2.5 movement, pose-transition, bamboo, pointed-dripstone and powder-snow behavior.
+- Switched the project version to a normal release-style version without the `-SNAPSHOT` suffix.
+
 ## 0.2.5-SNAPSHOT
 
 - Added pose-aware translated collision handling for Bedrock crawl/swimming transitions near hanging collision.

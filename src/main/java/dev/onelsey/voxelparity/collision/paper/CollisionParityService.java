@@ -7,17 +7,13 @@ import dev.onelsey.voxelparity.collision.math.PoseAwareCollisionGuard;
 import dev.onelsey.voxelparity.collision.math.ResolvedMotion;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.Set;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
 public final class CollisionParityService {
-    private final LongAdder allowedFailedMoves = new LongAdder();
-    private final LongAdder correctedAcceptedMoves = new LongAdder();
-    private final LongAdder poseCompatibleAcceptedMoves = new LongAdder();
-    private final LongAdder poseCompatibleFailedMoves = new LongAdder();
-    private final LongAdder blockedFailedCandidates = new LongAdder();
+    private final CollisionMetrics metrics = new CollisionMetrics();
 
     private volatile TranslatedBlockCollision translated = new TranslatedBlockCollision(false, false);
     private volatile double maxMovementPerAxis = 8.0D;
@@ -43,31 +39,34 @@ public final class CollisionParityService {
             return FailedMoveDecision.abstain("no-java-translated-collision");
         }
 
+        Set<TranslatedCollisionKind> javaKinds = scan.javaTranslatedKinds();
+
         if (scan.unloadedChunk()) {
-            blockedFailedCandidates.increment();
+            metrics.recordBlockedFailed(javaKinds);
             return FailedMoveDecision.blocked("unloaded-chunk-in-target");
         }
         if (scan.otherBlockCollision()) {
-            blockedFailedCandidates.increment();
+            metrics.recordBlockedFailed(javaKinds);
             return FailedMoveDecision.blocked("other-block-collision");
         }
         if (scan.entityCollision()) {
-            blockedFailedCandidates.increment();
+            metrics.recordBlockedFailed(javaKinds);
             return FailedMoveDecision.blocked("entity-collision");
         }
         if (scan.bedrockTranslatedOverlap()) {
+            Set<TranslatedCollisionKind> relevantKinds = scan.relevantKinds();
             if (compactPoseTarget.isPresent()
                     && compactPoseTargetIsSafe(player, compactPoseTarget.get())) {
-                allowedFailedMoves.increment();
-                poseCompatibleFailedMoves.increment();
+                metrics.recordAllowedFailed(relevantKinds);
+                metrics.recordPoseFailedAllowed(relevantKinds);
                 return FailedMoveDecision.allow("recent-swimming-target-clear");
             }
 
-            blockedFailedCandidates.increment();
+            metrics.recordBlockedFailed(relevantKinds);
             return FailedMoveDecision.blocked("bedrock-collision-still-overlaps");
         }
 
-        allowedFailedMoves.increment();
+        metrics.recordAllowedFailed(javaKinds);
         return FailedMoveDecision.allow("java-bedrock-collision-mismatch");
     }
 
@@ -96,9 +95,11 @@ public final class CollisionParityService {
         if (collisionBoxes.unloadedChunk()) {
             return AcceptedMoveDecision.abstain("unloaded-chunk-in-swept-volume");
         }
-        if (collisionBoxes.boxes().isEmpty()) {
+        if (collisionBoxes.collisions().isEmpty()) {
             return AcceptedMoveDecision.abstain("no-translated-collision-nearby");
         }
+
+        Set<TranslatedCollisionKind> targetKinds = collisionBoxes.kindsOverlapping(target);
 
         if (compactPoseTarget.isPresent()
                 && PoseAwareCollisionGuard.compactTargetClearsTranslatedCollision(
@@ -106,7 +107,7 @@ public final class CollisionParityService {
                         compactPoseTarget.get(),
                         collisionBoxes.boxes()
                 )) {
-            poseCompatibleAcceptedMoves.increment();
+            metrics.recordPoseAccepted(targetKinds);
             return AcceptedMoveDecision.poseCompatible(
                     "recent-swimming-target-clear",
                     compactPoseTarget.get()
@@ -123,7 +124,7 @@ public final class CollisionParityService {
         corrected.setX(from.getX() + motion.x());
         corrected.setY(from.getY() + motion.y());
         corrected.setZ(from.getZ() + motion.z());
-        correctedAcceptedMoves.increment();
+        metrics.recordCorrectedAccepted(targetKinds);
         return AcceptedMoveDecision.corrected("bedrock-target-overlap", corrected);
     }
 
@@ -140,6 +141,10 @@ public final class CollisionParityService {
         );
     }
 
+    public boolean enabled(TranslatedCollisionKind kind) {
+        return translated.enabled(kind);
+    }
+
     public boolean bambooEnabled() {
         return translated.bambooEnabled();
     }
@@ -148,24 +153,8 @@ public final class CollisionParityService {
         return translated.pointedDripstoneEnabled();
     }
 
-    public long allowedFailedMoves() {
-        return allowedFailedMoves.sum();
-    }
-
-    public long correctedAcceptedMoves() {
-        return correctedAcceptedMoves.sum();
-    }
-
-    public long poseCompatibleAcceptedMoves() {
-        return poseCompatibleAcceptedMoves.sum();
-    }
-
-    public long poseCompatibleFailedMoves() {
-        return poseCompatibleFailedMoves.sum();
-    }
-
-    public long blockedFailedCandidates() {
-        return blockedFailedCandidates.sum();
+    public CollisionMetrics.Snapshot metrics(TranslatedCollisionKind kind) {
+        return metrics.snapshot(kind);
     }
 
     private boolean compactPoseTargetIsSafe(Player player, Aabb compactTarget) {

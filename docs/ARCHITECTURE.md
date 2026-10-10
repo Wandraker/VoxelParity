@@ -24,7 +24,7 @@ VoxelParity corrects specific Bedrock-to-Java movement and collision mismatches 
 
 Powder snow remains a dedicated failed-movement module because its mismatch is state-oriented rather than a simple translated box.
 
-Bamboo and pointed dripstone are handled by `CollisionParityService`. The target player box is evaluated against both the Java collision shape and the calculated Bedrock collision shape.
+Bamboo and pointed dripstone are handled by `CollisionParityService`. Each translated block carries an explicit module kind so geometry, diagnostics and runtime metrics can be attributed independently. The target player box is evaluated against both the Java collision shape and the calculated Bedrock collision shape.
 
 A failed move is allowed only when:
 
@@ -72,4 +72,4 @@ Paper 26.3 exposes pointed dripstone through the generalized `Speleothem` block-
 
 ## Runtime diagnostics
 
-Per-player debug mode includes movement-state probes. Powder-snow presence is logged only when the tracked state changes, while pose-change and failed-movement events capture the server-side pose, bounding box and related movement state. Pose-compatible collision decisions are emitted separately as `[debug-pose-collision]` so they can be distinguished from ordinary geometry corrections.
+Per-player debug mode includes movement-state probes. Powder-snow presence is logged only when the tracked state changes, while pose-change and failed-movement events capture the server-side pose, bounding box and related movement state. Pose-compatible collision decisions are emitted separately as `[debug-pose-collision]` so they can be distinguished from ordinary geometry corrections. High-frequency accepted-movement pose logs are rate-limited, while failed-movement and actual pose-transition evidence remains unthrottled.

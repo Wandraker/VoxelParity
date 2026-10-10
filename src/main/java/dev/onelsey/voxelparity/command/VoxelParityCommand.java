@@ -2,7 +2,9 @@ package dev.onelsey.voxelparity.command;
 
 import dev.onelsey.voxelparity.VoxelParityPlugin;
 import dev.onelsey.voxelparity.bedrock.BedrockPlayerDetector;
+import dev.onelsey.voxelparity.collision.paper.CollisionMetrics;
 import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
+import dev.onelsey.voxelparity.collision.paper.TranslatedCollisionKind;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
 import dev.onelsey.voxelparity.module.ModuleManager;
 import dev.onelsey.voxelparity.movement.MovementModule;
@@ -111,22 +113,18 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
         }
 
         CollisionParityService collision = moduleManager.collisionParityService();
-        sender.sendMessage(
-                "bamboo: enabled=" + collision.bambooEnabled()
-                        + ", sharedAllowed=" + collision.allowedFailedMoves()
-                        + ", sharedCorrected=" + collision.correctedAcceptedMoves()
-                        + ", poseAccepted=" + collision.poseCompatibleAcceptedMoves()
-                        + ", poseFailedAllowed=" + collision.poseCompatibleFailedMoves()
-                        + ", sharedBlocked=" + collision.blockedFailedCandidates()
-        );
-        sender.sendMessage(
-                "pointed-dripstone: enabled=" + collision.pointedDripstoneEnabled()
-                        + ", sharedAllowed=" + collision.allowedFailedMoves()
-                        + ", sharedCorrected=" + collision.correctedAcceptedMoves()
-                        + ", poseAccepted=" + collision.poseCompatibleAcceptedMoves()
-                        + ", poseFailedAllowed=" + collision.poseCompatibleFailedMoves()
-                        + ", sharedBlocked=" + collision.blockedFailedCandidates()
-        );
+        for (TranslatedCollisionKind kind : TranslatedCollisionKind.values()) {
+            CollisionMetrics.Snapshot metrics = collision.metrics(kind);
+            sender.sendMessage(
+                    kind.id()
+                            + ": enabled=" + collision.enabled(kind)
+                            + ", allowed=" + metrics.allowedFailed()
+                            + ", corrected=" + metrics.correctedAccepted()
+                            + ", poseAccepted=" + metrics.poseAccepted()
+                            + ", poseFailedAllowed=" + metrics.poseFailedAllowed()
+                            + ", blocked=" + metrics.blockedFailed()
+            );
+        }
     }
 
     private void reload(CommandSender sender) {
