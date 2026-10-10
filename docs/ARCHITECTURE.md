@@ -80,3 +80,18 @@ Paper 26.3 exposes pointed dripstone through the generalized `Speleothem` block-
 ## Runtime diagnostics
 
 Per-player debug mode includes movement-state probes. Powder-snow presence is logged only when the tracked state changes, while pose-change and failed-movement events capture the server-side pose, bounding box and related movement state. Pose-compatible collision decisions are emitted separately as `[debug-pose-collision]` so they can be distinguished from ordinary geometry corrections. High-frequency accepted-movement pose logs are rate-limited, while failed-movement and actual pose-transition evidence remains unthrottled.
+
+
+## Spectator assist
+
+Spectator behavior is intentionally separated from collision parity. A Bedrock player in `SPECTATOR` never enters the normal failed-movement or translated-collision correction paths.
+
+`SpectatorAssistService` consumes `PlayerInputEvent` state and tracks the player's actual progress on the entity scheduler. Normal client movement remains authoritative while progress is above the configured threshold. After a short stall, a bounded assist burst advances the player in the normalized requested direction. Forward/back movement respects camera pitch; strafe is yaw-relative; jump and sneak provide explicit vertical input.
+
+Assist targets are rejected when the target chunk is not already loaded. Assisted movement uses asynchronous teleport completion and clears velocity while assisting so a client-side acceleration spike is not carried out of an obstruction.
+
+## Movement trace recorder
+
+`MovementTraceRecorder` is an always-on diagnostic ring buffer for confirmed Bedrock players. It stores selected movement evidence such as failed moves, non-trivial parity decisions, pose transitions, spectator input changes and spectator-assist activation. Normal accepted movement packets are not recorded.
+
+Storage is bounded by `recorder.entries-per-player` and `recorder.max-players`. There is no continuous dump file and no continuous disk I/O. `/vp dump <player>` snapshots immutable trace entries and schedules the file write on Paper's async scheduler. The recorder buffers do not retain Player or world objects.

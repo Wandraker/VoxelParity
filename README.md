@@ -6,13 +6,14 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.3.2`
+Version: `0.4.0`
 
 Implemented:
 
 - Bedrock-only handling through Floodgate or Geyser detection.
 - Powder-snow failed-movement correction.
 - Conservative Bedrock swimming false-clip recovery when Leaf rejects a move even though the entire swept Java collision volume is clear.
+- Bedrock spectator assist that only takes over after movement stalls, supports forward/back/strafe/up/down input, uses short bounded bursts and clears residual velocity after assisted movement.
 - Per-player bamboo collision parity with Bedrock thin/thick stalk geometry selected from the Java bamboo age.
 - Per-player pointed-dripstone collision parity with recent swimming/crawl pose transition handling.
 - Adapter-based translated-collision registry for independently maintained parity modules.
@@ -22,6 +23,7 @@ Implemented:
 - Deterministic geometry and movement unit tests.
 - GitHub Actions build on Java 25.
 - Per-player debug logging, translated-collision geometry traces, powder-snow presence transitions, pose diagnostics, ordinary Java collision traces for swimming failures and per-module runtime counters.
+- Always-on bounded in-memory movement trace recorder for Bedrock players with asynchronous `/vp dump <player>` export.
 
 VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics. Spectator-mode players are hard-exempt from all parity movement handling. Swimming false-clip recovery is only allowed when an independent swept-volume scan finds no collidable Java shape, no powder snow and no unloaded chunk.
 
@@ -47,6 +49,7 @@ The plugin jar is created under `target/`.
 /vp status
 /vp modules
 /vp debug <player> [on|off]
+/vp dump <player>
 /vp reload
 ```
 
@@ -62,6 +65,18 @@ The translated collision layer works in both directions:
 2. When Java accepts movement, VoxelParity corrects it only if the reported target player box itself overlaps a translated Bedrock collision box. During a short, local grace window after a real server-observed `SWIMMING` pose transition, the same target is also checked with a 0.6-block-high compact box. If that compact box is clear, the movement is left untouched so the server/Geyser pose transition can complete instead of fighting the collision correction. A straight segment between two legal packet positions is not treated as proof of collision.
 
 Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `age=1` uses the thick stalk width of `3/16`. Both retain the deterministic Bedrock position offset. `BAMBOO_SAPLING` is intentionally not translated; live Bedrock testing confirmed the sapling remains pass-through for player movement.
+
+## Spectator assist
+
+Bedrock spectator movement remains separate from normal collision parity. The assist listens to server-side movement input and only activates after the player makes too little progress for a short configurable window. It can assist forward, backward, strafing, jump and sneak directions, including pitch-aware forward/back movement.
+
+Each assist is a short bounded burst. Targets in unloaded chunks are never used, and residual velocity is cleared while assisting to reduce the acceleration spike observed after escaping a block.
+
+## Movement trace recorder
+
+VoxelParity keeps a small bounded ring buffer of interesting Bedrock movement events in memory. It does not record every ordinary movement packet and it performs no continuous disk I/O. By default it keeps at most 128 entries for each of at most 64 recently observed players.
+
+`/vp dump <player>` snapshots the buffer and writes it asynchronously under `plugins/VoxelParity/dumps/`.
 
 ## Powder snow safety model
 

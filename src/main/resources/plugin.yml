@@ -12,7 +12,7 @@ commands:
   voxelparity:
     description: VoxelParity administration command
     aliases: [vp]
-    usage: /voxelparity <status|modules|debug|reload>
+    usage: /voxelparity <status|modules|debug|dump|reload>
     permission: voxelparity.admin
 permissions:
   voxelparity.admin:

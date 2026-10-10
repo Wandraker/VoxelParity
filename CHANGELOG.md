@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0
+
+- Added Bedrock spectator movement assist as a separate path from normal collision parity.
+- Spectator assist reads Paper player input for forward, backward, left, right, jump, sneak and sprint state.
+- Normal spectator movement is left alone while the player is making progress; assistance only starts after a short stall window.
+- Added bounded assist bursts that move in the requested 3D direction, including vertical movement and pitch-aware forward/back movement.
+- Assisted spectator steps refuse unloaded target chunks and clear residual velocity to reduce the acceleration spike observed after escaping blocks.
+- Uses the entity scheduler for per-player assist ticks and asynchronous teleport completion.
+- Added an always-on bounded in-memory movement trace recorder for Bedrock players.
+- Recorder data is event-oriented rather than per-move, rate-limited for noisy failure/pose paths and capped by player and entry count.
+- Added `/vp dump <player>` to asynchronously export recent movement evidence under `plugins/VoxelParity/dumps/`, including recently disconnected tracked players.
+- Added recorder and spectator-assist status/counters to administration commands.
+- Added unit coverage for ring-buffer eviction and all six spectator movement directions plus diagonal normalization.
+- Preserved the validated 0.3.2 swimming false-clip recovery, solid-wall safety, powder-snow, bamboo and pointed-dripstone behavior.
+
 ## 0.3.2
 
 - Added conservative recovery for false `CLIPPED_INTO_BLOCK` events while a Bedrock player is actually in the `SWIMMING` pose.

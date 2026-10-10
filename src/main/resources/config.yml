@@ -8,11 +8,23 @@ modules:
     enabled: true
     max-movement-per-axis: 1.0
     suppress-vanilla-warning: true
+  spectator-assist:
+    enabled: true
+    stall-ticks: 2
+    burst-ticks: 5
+    idle-task-ticks: 20
+    minimum-progress: 0.015
+    step: 0.22
+    sprint-multiplier: 1.35
   bamboo:
     enabled: true
   pointed-dripstone:
     enabled: true
 collision:
   max-movement-per-axis: 8.0
+recorder:
+  enabled: true
+  entries-per-player: 128
+  max-players: 64
 debug:
   log-decisions: false

@@ -6,11 +6,16 @@ import dev.onelsey.voxelparity.collision.paper.CollisionMetrics;
 import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
 import dev.onelsey.voxelparity.collision.paper.TranslatedCollisionKind;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
+import dev.onelsey.voxelparity.debug.MovementTraceRecorder;
 import dev.onelsey.voxelparity.module.ModuleManager;
 import dev.onelsey.voxelparity.movement.MovementModule;
+import dev.onelsey.voxelparity.spectator.SpectatorAssistService;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -25,17 +30,23 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
     private final BedrockPlayerDetector detector;
     private final DebugRegistry debugRegistry;
     private final ModuleManager moduleManager;
+    private final MovementTraceRecorder traceRecorder;
+    private final SpectatorAssistService spectatorAssist;
 
     public VoxelParityCommand(
             VoxelParityPlugin plugin,
             BedrockPlayerDetector detector,
             DebugRegistry debugRegistry,
-            ModuleManager moduleManager
+            ModuleManager moduleManager,
+            MovementTraceRecorder traceRecorder,
+            SpectatorAssistService spectatorAssist
     ) {
         this.plugin = plugin;
         this.detector = detector;
         this.debugRegistry = debugRegistry;
         this.moduleManager = moduleManager;
+        this.traceRecorder = traceRecorder;
+        this.spectatorAssist = spectatorAssist;
     }
 
     @Override
@@ -60,6 +71,7 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
             case "modules" -> sendModules(sender);
             case "reload" -> reload(sender);
             case "debug" -> debug(sender, args);
+            case "dump" -> dump(sender, args);
             default -> sendHelp(sender, label);
         }
         return true;
@@ -77,15 +89,18 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 1) {
-            return filter(args[0], List.of("status", "modules", "debug", "reload"));
+            return filter(args[0], List.of("status", "modules", "debug", "dump", "reload"));
         }
 
-        if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
-            List<String> names = new ArrayList<>();
+        if (args.length == 2
+                && (args[0].equalsIgnoreCase("debug")
+                || args[0].equalsIgnoreCase("dump"))) {
+            Set<String> names = new LinkedHashSet<>();
             for (Player player : Bukkit.getOnlinePlayers()) {
                 names.add(player.getName());
             }
-            return filter(args[1], names);
+            names.addAll(traceRecorder.recentPlayerNames());
+            return filter(args[1], new ArrayList<>(names));
         }
 
         if (args.length == 3 && args[0].equalsIgnoreCase("debug")) {
@@ -96,10 +111,17 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendStatus(CommandSender sender) {
+        int activeModules = moduleManager.enabledModuleCount()
+                + (spectatorAssist.enabled() ? 1 : 0);
         sender.sendMessage("VoxelParity " + plugin.getPluginMeta().getVersion());
         sender.sendMessage("Bedrock detector: " + detector.providerName());
-        sender.sendMessage("Enabled modules: " + moduleManager.enabledModuleCount());
+        sender.sendMessage("Enabled modules: " + activeModules);
         sender.sendMessage("Global debug logging: " + debugRegistry.logAll());
+        sender.sendMessage(
+                "Recorder: enabled=" + traceRecorder.enabled()
+                        + ", trackedPlayers=" + traceRecorder.trackedPlayers()
+                        + ", entriesPerPlayer=" + traceRecorder.entriesPerPlayer()
+        );
     }
 
     private void sendModules(CommandSender sender) {
@@ -125,6 +147,13 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
                             + ", blocked=" + metrics.blockedFailed()
             );
         }
+
+        sender.sendMessage(
+                "spectator-assist: enabled=" + spectatorAssist.enabled()
+                        + ", bursts=" + spectatorAssist.assistBursts()
+                        + ", steps=" + spectatorAssist.assistedSteps()
+                        + ", activeTasks=" + spectatorAssist.activeTasks()
+        );
     }
 
     private void reload(CommandSender sender) {
@@ -162,10 +191,32 @@ public final class VoxelParityCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("Debug for " + player.getName() + ": " + enabled);
     }
 
+    private void dump(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("Usage: /vp dump <player>");
+            return;
+        }
+
+        Optional<MovementTraceRecorder.DumpTicket> ticket =
+                traceRecorder.dumpAsync(args[1]);
+        if (ticket.isEmpty()) {
+            sender.sendMessage("No recent VoxelParity trace data for: " + args[1]);
+            return;
+        }
+
+        MovementTraceRecorder.DumpTicket value = ticket.get();
+        sender.sendMessage(
+                "Queued movement dump for " + value.playerName()
+                        + " (" + value.entries() + " entries): "
+                        + value.relativePath()
+        );
+    }
+
     private static void sendHelp(CommandSender sender, String label) {
         sender.sendMessage("/" + label + " status");
         sender.sendMessage("/" + label + " modules");
         sender.sendMessage("/" + label + " debug <player> [on|off]");
+        sender.sendMessage("/" + label + " dump <player>");
         sender.sendMessage("/" + label + " reload");
     }
 

@@ -7,6 +7,7 @@ import dev.onelsey.voxelparity.collision.paper.CollisionWorld;
 import dev.onelsey.voxelparity.collision.paper.PaperBoxes;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
 import dev.onelsey.voxelparity.debug.MovementDebugProbe;
+import dev.onelsey.voxelparity.debug.MovementTraceRecorder;
 import dev.onelsey.voxelparity.module.ModuleManager;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
 import java.util.List;
@@ -31,18 +32,21 @@ public final class MovementListener implements Listener {
     private final DebugRegistry debugRegistry;
     private final ModuleManager moduleManager;
     private final MovementDebugProbe debugProbe;
+    private final MovementTraceRecorder traceRecorder;
     private final PoseTransitionTracker poseTracker = new PoseTransitionTracker();
 
     public MovementListener(
             JavaPlugin plugin,
             BedrockPlayerDetector detector,
             DebugRegistry debugRegistry,
-            ModuleManager moduleManager
+            ModuleManager moduleManager,
+            MovementTraceRecorder traceRecorder
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.detector = Objects.requireNonNull(detector, "detector");
         this.debugRegistry = Objects.requireNonNull(debugRegistry, "debugRegistry");
         this.moduleManager = Objects.requireNonNull(moduleManager, "moduleManager");
+        this.traceRecorder = Objects.requireNonNull(traceRecorder, "traceRecorder");
         this.debugProbe = new MovementDebugProbe(plugin, debugRegistry);
     }
 
@@ -53,6 +57,17 @@ public final class MovementListener implements Listener {
             return;
         }
 
+        traceRecorder.recordRateLimited(
+                player,
+                "FAIL_MOVE",
+                100_000_000L,
+                "reason=" + event.getFailReason()
+                        + " allowed=" + event.isAllowed()
+                        + " from=" + format(event.getFrom())
+                        + " to=" + format(event.getTo())
+                        + " gameMode=" + player.getGameMode()
+                        + " pose=" + player.getPose()
+        );
         debugProbe.logFailMove(event);
 
         if (MovementPolicy.bypassParity(player.getGameMode())) {
@@ -88,6 +103,19 @@ public final class MovementListener implements Listener {
 
             ModuleEvaluation evaluation = module.evaluate(context);
             logDecision(player, evaluation.moduleId(), evaluation.outcome().name(), evaluation.reason(), from, to);
+            if (evaluation.outcome() != ModuleEvaluation.Outcome.ABSTAIN
+                    || "java-collision-in-swept-volume".equals(evaluation.reason())) {
+                traceRecorder.recordRateLimited(
+                        player,
+                        "DECISION_" + evaluation.moduleId(),
+                        100_000_000L,
+                        "outcome=" + evaluation.outcome()
+                                + " reason=" + evaluation.reason()
+                                + " from=" + format(from)
+                                + " to=" + format(to)
+                                + " pose=" + player.getPose()
+                );
+            }
             if (evaluation.outcome() == ModuleEvaluation.Outcome.ALLOW) {
                 event.setAllowed(true);
                 if (evaluation.suppressVanillaWarning()) {
@@ -114,6 +142,17 @@ public final class MovementListener implements Listener {
                 from,
                 to
         );
+        if (collisionDecision.outcome() != CollisionParityService.FailedMoveDecision.Outcome.ABSTAIN) {
+            traceRecorder.record(
+                    player,
+                    "DECISION_translated-collision",
+                    "outcome=" + collisionDecision.outcome()
+                            + " reason=" + collisionDecision.reason()
+                            + " from=" + format(from)
+                            + " to=" + format(to)
+                            + " pose=" + player.getPose()
+            );
+        }
 
         if (collisionDecision.outcome() == CollisionParityService.FailedMoveDecision.Outcome.ABSTAIN
                 && debugProbe.shouldLogSwimmingClip(player)) {
@@ -194,6 +233,14 @@ public final class MovementListener implements Listener {
                 );
 
         if (decision.outcome() == CollisionParityService.AcceptedMoveDecision.Outcome.POSE_COMPATIBLE) {
+            traceRecorder.recordRateLimited(
+                    player,
+                    "POSE_COMPATIBLE",
+                    250_000_000L,
+                    "reason=" + decision.reason()
+                            + " from=" + format(event.getFrom())
+                            + " to=" + format(event.getTo())
+            );
             if (debugProbe.shouldLogPoseMoveAccept(player)) {
                 plugin.getLogger().info(
                         "[debug-pose-collision] player=" + player.getName()
@@ -238,6 +285,13 @@ public final class MovementListener implements Listener {
                             + " phase=MOVE_CORRECT correctedTarget=" + format(correctedTarget)
             );
         }
+        traceRecorder.record(
+                player,
+                "MOVE_CORRECT",
+                "from=" + format(event.getFrom())
+                        + " requested=" + format(event.getTo())
+                        + " corrected=" + format(correctedLocation)
+        );
         event.setTo(correctedLocation);
     }
 
@@ -250,6 +304,15 @@ public final class MovementListener implements Listener {
             return;
         }
 
+        traceRecorder.recordRateLimited(
+                player,
+                "POSE",
+                100_000_000L,
+                "current=" + player.getPose()
+                        + " new=" + event.getPose()
+                        + " gameMode=" + player.getGameMode()
+                        + " pos=" + format(player.getLocation())
+        );
         debugProbe.logPoseChange(player, event.getPose());
         if (MovementPolicy.bypassParity(player.getGameMode())) {
             poseTracker.clear(player.getUniqueId());
@@ -260,8 +323,18 @@ public final class MovementListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        debugProbe.clear(event.getPlayer().getUniqueId());
-        poseTracker.clear(event.getPlayer().getUniqueId());
+        Player player = event.getPlayer();
+        if (detector.isBedrockPlayer(player.getUniqueId())) {
+            traceRecorder.record(
+                    player,
+                    "SESSION",
+                    "quit gameMode=" + player.getGameMode()
+                            + " pose=" + player.getPose()
+                            + " pos=" + format(player.getLocation())
+            );
+        }
+        debugProbe.clear(player.getUniqueId());
+        poseTracker.clear(player.getUniqueId());
     }
 
 

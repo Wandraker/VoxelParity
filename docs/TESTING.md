@@ -1,4 +1,4 @@
-# VoxelParity 0.3.2 test plan
+# VoxelParity 0.4.0 test plan
 
 Target environment:
 
@@ -83,12 +83,17 @@ For upward and hanging tips:
 5. Repeat beside powder snow and confirm the swimming module does not take ownership from the powder-snow module.
 6. Keep `[debug-java-collision]` lines for any remaining rejected swimming movement.
 
-## Spectator control
+## Spectator assist
 
 1. Switch the Bedrock player to spectator mode.
-2. Move through translated blocks, powder snow and ordinary solid blocks.
-3. Confirm VoxelParity produces no `ALLOW`, `CORRECT` or module intervention for spectator movement.
-4. Any remaining spectator movement limitation is outside VoxelParity's movement handling.
+2. Move normally in open air in every direction and confirm the assist does not constantly take over while client progress is healthy.
+3. Reproduce the previous Bedrock spectator stall against or inside a solid structure.
+4. Hold forward, backward, left, right, jump and sneak separately and confirm a stalled direction can trigger a short assist burst.
+5. Test diagonal combinations and forward movement while looking sharply up and down.
+6. Confirm leaving an obstruction does not produce the previous acceleration spike.
+7. Confirm assist never targets an unloaded chunk.
+8. Run `/vp modules` and confirm `spectator-assist` burst/step counters increase only when assistance actually activates.
+9. Confirm spectator movement still never enters powder-snow, swimming or translated-collision parity decisions.
 
 ## Safety cases
 
@@ -120,3 +125,14 @@ For each failure or regression, keep:
 - relevant `[debug]` and `[debug-geometry]` lines;
 - exact block coordinates and states;
 - a short video when geometry is visually ambiguous.
+
+
+## Movement trace recorder
+
+1. Leave `recorder.enabled: true` with the default bounded limits.
+2. Reproduce several swimming failures, pose changes and a spectator assist burst without enabling verbose debug.
+3. Run `/vp dump <player>`.
+4. Confirm the command returns immediately and the dump is written under `plugins/VoxelParity/dumps/`.
+5. Confirm the file contains recent fail-move, decision, pose and spectator-assist evidence but does not contain continuous ordinary movement packets.
+6. Disconnect the Bedrock player and confirm a recent trace can still be dumped by player name.
+7. Generate more than the configured per-player entry limit and confirm the oldest entries are evicted rather than memory growing without bound.
