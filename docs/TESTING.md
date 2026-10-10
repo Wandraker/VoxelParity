@@ -1,4 +1,4 @@
-# VoxelParity 0.3.1 test plan
+# VoxelParity 0.3.2 test plan
 
 Target environment:
 
@@ -74,13 +74,14 @@ For upward and hanging tips:
 7. Leave the snow and confirm a `[debug-snow]` `EXIT` transition.
 8. Repeat with leather boots and confirm VoxelParity does not bypass the intended Java collision rule.
 
-## Swimming collision diagnostics
+## Swimming false-clip recovery
 
 1. Enable per-player debug.
-2. Reproduce a Bedrock swimming movement that Leaf rejects with `CLIPPED_INTO_BLOCK` while no bamboo or pointed dripstone is involved.
-3. Keep the `[debug-java-collision]` lines.
-4. Confirm the dump identifies the ordinary collidable block, its block data and Java collision boxes.
-5. Do not treat the diagnostic output itself as permission to bypass that collision.
+2. Reproduce the previously observed underwater Bedrock movement where Leaf repeatedly emits `CLIPPED_INTO_BLOCK`.
+3. Confirm genuinely clear swimming movement can produce `module=swimming-collision outcome=ALLOW reason=swimming-swept-volume-clear` instead of rubberbanding.
+4. Swim directly into a full solid wall and confirm the swimming module abstains with `java-collision-in-swept-volume`.
+5. Repeat beside powder snow and confirm the swimming module does not take ownership from the powder-snow module.
+6. Keep `[debug-java-collision]` lines for any remaining rejected swimming movement.
 
 ## Spectator control
 

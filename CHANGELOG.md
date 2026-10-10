@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2
+
+- Added conservative recovery for false `CLIPPED_INTO_BLOCK` events while a Bedrock player is actually in the `SWIMMING` pose.
+- A swimming failure is bypassed only when the complete axis-aligned swept player volume is independently proven clear of Java collision shapes.
+- Powder snow is explicitly excluded from the swimming recovery path so its dedicated parity module remains authoritative.
+- Swimming recovery refuses unloaded chunks and movement larger than the configured per-axis limit.
+- Added `modules.swimming-collision` configuration with a default 1-block per-axis safety limit.
+- Kept the 0.3.1 hard spectator bypass and ordinary Java collision diagnostics.
+- Added unit coverage for swimming recovery safety gates.
+- This change targets the real Leaf 26.3/Geyser trace where repeated swimming moves were rejected at collision boundaries while VoxelParity 0.3.0 correctly had no translated block match.
+
 ## 0.3.1
 
 - Added a hard spectator-mode bypass so VoxelParity never alters Bedrock movement while the player is in `SPECTATOR`.

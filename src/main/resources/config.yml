@@ -4,6 +4,10 @@ modules:
     max-movement-per-axis: 8.0
     require-no-leather-boots: true
     suppress-vanilla-warning: true
+  swimming-collision:
+    enabled: true
+    max-movement-per-axis: 1.0
+    suppress-vanilla-warning: true
   bamboo:
     enabled: true
   pointed-dripstone:

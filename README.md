@@ -6,12 +6,13 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.3.1`
+Version: `0.3.2`
 
 Implemented:
 
 - Bedrock-only handling through Floodgate or Geyser detection.
 - Powder-snow failed-movement correction.
+- Conservative Bedrock swimming false-clip recovery when Leaf rejects a move even though the entire swept Java collision volume is clear.
 - Per-player bamboo collision parity with Bedrock thin/thick stalk geometry selected from the Java bamboo age.
 - Per-player pointed-dripstone collision parity with recent swimming/crawl pose transition handling.
 - Adapter-based translated-collision registry for independently maintained parity modules.
@@ -22,7 +23,7 @@ Implemented:
 - GitHub Actions build on Java 25.
 - Per-player debug logging, translated-collision geometry traces, powder-snow presence transitions, pose diagnostics, ordinary Java collision traces for swimming failures and per-module runtime counters.
 
-VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics. Spectator-mode players are hard-exempt from all parity movement handling.
+VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics. Spectator-mode players are hard-exempt from all parity movement handling. Swimming false-clip recovery is only allowed when an independent swept-volume scan finds no collidable Java shape, no powder snow and no unloaded chunk.
 
 ## Requirements
 
