@@ -89,6 +89,50 @@ public final class CollisionWorld {
         return new CollisionBoxes(List.copyOf(boxes), unloadedChunk);
     }
 
+    public static List<TranslatedCollisionDiagnostic> translatedDiagnostics(
+            World world,
+            Aabb bounds,
+            Aabb target,
+            TranslatedBlockCollision translated
+    ) {
+        List<TranslatedCollisionDiagnostic> diagnostics = new ArrayList<>();
+
+        BlockRange range = BlockRange.from(world, bounds);
+        for (int x = range.minX(); x <= range.maxX(); x++) {
+            for (int z = range.minZ(); z <= range.maxZ(); z++) {
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                    continue;
+                }
+
+                for (int y = range.minY(); y <= range.maxY(); y++) {
+                    Block block = world.getBlockAt(x, y, z);
+                    Optional<Aabb> bedrock = translated.bedrockBox(block);
+                    if (bedrock.isEmpty()) {
+                        continue;
+                    }
+
+                    List<Aabb> javaBoxes = javaShapeBoxes(block);
+                    boolean javaTargetOverlap = javaBoxes.stream().anyMatch(target::overlaps);
+                    boolean bedrockTargetOverlap = bedrock.get().overlaps(target);
+
+                    diagnostics.add(new TranslatedCollisionDiagnostic(
+                            block.getType().name(),
+                            block.getX(),
+                            block.getY(),
+                            block.getZ(),
+                            block.getBlockData().getAsString(),
+                            javaBoxes,
+                            bedrock.get(),
+                            javaTargetOverlap,
+                            bedrockTargetOverlap
+                    ));
+                }
+            }
+        }
+
+        return List.copyOf(diagnostics);
+    }
+
     private static boolean javaShapeOverlaps(Block block, Aabb target) {
         Collection<BoundingBox> local = block.getCollisionShape().getBoundingBoxes();
         for (BoundingBox box : local) {
@@ -103,6 +147,19 @@ public final class CollisionWorld {
             }
         }
         return false;
+    }
+
+    private static List<Aabb> javaShapeBoxes(Block block) {
+        List<Aabb> boxes = new ArrayList<>();
+        for (BoundingBox box : block.getCollisionShape().getBoundingBoxes()) {
+            boxes.add(PaperBoxes.move(
+                    PaperBoxes.fromPaper(box),
+                    block.getX(),
+                    block.getY(),
+                    block.getZ()
+            ));
+        }
+        return List.copyOf(boxes);
     }
 
     private static boolean collidesWithPlayer(Entity entity, Player player) {
@@ -126,6 +183,19 @@ public final class CollisionWorld {
     }
 
     public record CollisionBoxes(List<Aabb> boxes, boolean unloadedChunk) {
+    }
+
+    public record TranslatedCollisionDiagnostic(
+            String material,
+            int x,
+            int y,
+            int z,
+            String blockData,
+            List<Aabb> javaBoxes,
+            Aabb bedrockBox,
+            boolean javaTargetOverlap,
+            boolean bedrockTargetOverlap
+    ) {
     }
 
     private record BlockRange(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {

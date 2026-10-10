@@ -3,10 +3,12 @@ package dev.onelsey.voxelparity.movement;
 import dev.onelsey.voxelparity.bedrock.BedrockPlayerDetector;
 import dev.onelsey.voxelparity.collision.math.Aabb;
 import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
+import dev.onelsey.voxelparity.collision.paper.CollisionWorld;
 import dev.onelsey.voxelparity.collision.paper.PaperBoxes;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
 import dev.onelsey.voxelparity.module.ModuleManager;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.bukkit.Location;
@@ -82,7 +84,8 @@ public final class MovementListener implements Listener {
             }
         }
 
-        Aabb target = PaperBoxes.playerAt(player, to);
+        Aabb fromAabb = PaperBoxes.fromPaper(fromBox);
+        Aabb target = PaperBoxes.fromPaper(toBox);
         CollisionParityService.FailedMoveDecision collisionDecision =
                 moduleManager.collisionParityService().evaluateFailedMove(player, target);
         logDecision(
@@ -93,6 +96,23 @@ public final class MovementListener implements Listener {
                 from,
                 to
         );
+
+        if (debugRegistry.isEnabled(player.getUniqueId())
+                && collisionDecision.outcome() != CollisionParityService.FailedMoveDecision.Outcome.ABSTAIN) {
+            logCollisionDiagnostics(
+                    player,
+                    "FAIL_MOVE_" + collisionDecision.outcome().name(),
+                    fromAabb,
+                    target,
+                    fromAabb.union(target),
+                    moduleManager.collisionParityService().diagnostics(
+                            player,
+                            fromAabb.union(target),
+                            target
+                    )
+            );
+        }
+
         if (collisionDecision.outcome() == CollisionParityService.FailedMoveDecision.Outcome.ALLOW) {
             event.setAllowed(true);
             event.setLogWarning(false);
@@ -112,6 +132,9 @@ public final class MovementListener implements Listener {
             return;
         }
 
+        Aabb start = PaperBoxes.playerAt(player, event.getFrom());
+        Aabb requestedTarget = PaperBoxes.playerAt(player, event.getTo());
+
         Optional<Location> corrected = moduleManager.collisionParityService().correctAcceptedMove(
                 player,
                 event.getFrom(),
@@ -119,6 +142,7 @@ public final class MovementListener implements Listener {
         );
         corrected.ifPresent(location -> {
             if (debugRegistry.isEnabled(player.getUniqueId())) {
+                Aabb correctedTarget = PaperBoxes.playerAt(player, location);
                 plugin.getLogger().info(
                         "[debug] player=" + player.getName()
                                 + " module=translated-collision outcome=CORRECT"
@@ -126,9 +150,57 @@ public final class MovementListener implements Listener {
                                 + " requested=" + format(event.getTo())
                                 + " corrected=" + format(location)
                 );
+                logCollisionDiagnostics(
+                        player,
+                        "MOVE_CORRECT",
+                        start,
+                        requestedTarget,
+                        start.union(requestedTarget),
+                        moduleManager.collisionParityService().diagnostics(
+                                player,
+                                start.union(requestedTarget),
+                                requestedTarget
+                        )
+                );
+                plugin.getLogger().info(
+                        "[debug-geometry] player=" + player.getName()
+                                + " phase=MOVE_CORRECT correctedTarget=" + format(correctedTarget)
+                );
             }
             event.setTo(location);
         });
+    }
+
+    private void logCollisionDiagnostics(
+            Player player,
+            String phase,
+            Aabb start,
+            Aabb target,
+            Aabb swept,
+            List<CollisionWorld.TranslatedCollisionDiagnostic> diagnostics
+    ) {
+        plugin.getLogger().info(
+                "[debug-geometry] player=" + player.getName()
+                        + " phase=" + phase
+                        + " start=" + format(start)
+                        + " target=" + format(target)
+                        + " swept=" + format(swept)
+                        + " translatedBlocks=" + diagnostics.size()
+        );
+
+        for (CollisionWorld.TranslatedCollisionDiagnostic diagnostic : diagnostics) {
+            plugin.getLogger().info(
+                    "[debug-geometry] player=" + player.getName()
+                            + " phase=" + phase
+                            + " block=" + diagnostic.material()
+                            + " pos=" + diagnostic.x() + "," + diagnostic.y() + "," + diagnostic.z()
+                            + " data=" + diagnostic.blockData()
+                            + " javaBoxes=" + formatBoxes(diagnostic.javaBoxes())
+                            + " bedrockBox=" + format(diagnostic.bedrockBox())
+                            + " javaTargetOverlap=" + diagnostic.javaTargetOverlap()
+                            + " bedrockTargetOverlap=" + diagnostic.bedrockTargetOverlap()
+            );
+        }
     }
 
     private void logDecision(
@@ -159,5 +231,27 @@ public final class MovementListener implements Listener {
 
     private static String format(Location location) {
         return String.format("%.4f,%.4f,%.4f", location.getX(), location.getY(), location.getZ());
+    }
+
+    private static String format(Aabb box) {
+        return String.format(
+                "[%.6f,%.6f,%.6f -> %.6f,%.6f,%.6f]",
+                box.minX(),
+                box.minY(),
+                box.minZ(),
+                box.maxX(),
+                box.maxY(),
+                box.maxZ()
+        );
+    }
+
+    private static String formatBoxes(List<Aabb> boxes) {
+        if (boxes.isEmpty()) {
+            return "[]";
+        }
+        return boxes.stream()
+                .map(MovementListener::format)
+                .toList()
+                .toString();
     }
 }

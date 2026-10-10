@@ -1,4 +1,4 @@
-# VoxelParity 0.2.0-SNAPSHOT test plan
+# VoxelParity 0.2.1-SNAPSHOT test plan
 
 Target environment:
 
@@ -35,7 +35,7 @@ Target environment:
 5. Walk through dense and vertically stacked bamboo.
 6. Confirm false Java rubberband is removed where the Bedrock client has legal space.
 7. Confirm the player cannot cross the calculated Bedrock stalk box.
-8. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.
+8. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.\n9. When mature bamboo still catches the player, keep the `[debug-geometry]` lines for that exact attempt. They include block coordinates, block data, Java collision boxes, the calculated Bedrock box and target overlap flags.
 
 ## Bedrock pointed dripstone
 
@@ -90,6 +90,6 @@ For each failure or regression, keep:
 - Geyser and Floodgate versions;
 - Bedrock client version;
 - `/vp modules` counters;
-- relevant debug lines;
+- relevant `[debug]` and `[debug-geometry]` lines;
 - exact block coordinates and states;
 - a short video when geometry is visually ambiguous.

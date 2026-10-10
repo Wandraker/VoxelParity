@@ -6,7 +6,7 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.2.0-SNAPSHOT`
+Version: `0.2.1-SNAPSHOT`
 
 Implemented:
 
@@ -20,7 +20,7 @@ Implemented:
 - Entity, unrelated block and unloaded-chunk safety gates.
 - Deterministic geometry and movement unit tests.
 - GitHub Actions build on Java 25.
-- Per-player debug logging and runtime counters.
+- Per-player debug logging, translated-collision geometry traces and runtime counters.
 
 VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics.
 

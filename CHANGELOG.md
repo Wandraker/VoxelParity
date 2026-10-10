@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1-SNAPSHOT
+
+- Added detailed translated-collision geometry diagnostics for runtime Bedrock testing.
+- Debug traces now report the exact translated block, coordinates, block data, Java collision boxes, calculated Bedrock collision box, player start/target/swept boxes and overlap results.
+- Added geometry traces for both failed-movement decisions and accepted-movement corrections.
+- Kept the collision geometry unchanged so mature bamboo failures can be measured before tuning offsets or dimensions.
+- Updated the project version to `0.2.1-SNAPSHOT`.
+
 ## 0.2.0-SNAPSHOT
 
 - Added a shared translated-collision subsystem for Bedrock-specific block geometry.

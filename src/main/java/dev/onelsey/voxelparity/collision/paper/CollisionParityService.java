@@ -4,6 +4,7 @@ import dev.onelsey.voxelparity.collision.math.Aabb;
 import dev.onelsey.voxelparity.collision.math.Motion;
 import dev.onelsey.voxelparity.collision.math.MotionResolver;
 import dev.onelsey.voxelparity.collision.math.ResolvedMotion;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 import org.bukkit.Location;
@@ -89,6 +90,19 @@ public final class CollisionParityService {
         corrected.setZ(from.getZ() + motion.z());
         correctedAcceptedMoves.increment();
         return Optional.of(corrected);
+    }
+
+    public List<CollisionWorld.TranslatedCollisionDiagnostic> diagnostics(
+            Player player,
+            Aabb bounds,
+            Aabb target
+    ) {
+        return CollisionWorld.translatedDiagnostics(
+                player.getWorld(),
+                bounds,
+                target,
+                translated
+        );
     }
 
     public boolean bambooEnabled() {
