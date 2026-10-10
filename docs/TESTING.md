@@ -35,7 +35,8 @@ Target environment:
 5. Walk through dense and vertically stacked bamboo.
 6. Confirm false Java rubberband is removed where the Bedrock client has legal space.
 7. Confirm the player cannot cross the calculated Bedrock stalk box.
-8. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.\n9. When mature bamboo still catches the player, keep the `[debug-geometry]` lines for that exact attempt. They include block coordinates, block data, Java collision boxes, the calculated Bedrock box and target overlap flags.
+8. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.
+9. When mature bamboo still catches the player, keep the `[debug-geometry]` lines for that exact attempt. They include block coordinates, block data, Java collision boxes, the calculated Bedrock box and target overlap flags.
 
 ## Bedrock pointed dripstone
 
