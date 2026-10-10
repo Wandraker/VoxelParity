@@ -65,3 +65,8 @@ The Paper layer adapts Bukkit block data into those core types.
 ## Pointed dripstone
 
 Paper 26.3 exposes pointed dripstone through the generalized `Speleothem` block-data interface. VoxelParity maps `TIP`, `TIP_MERGE`, `FRUSTUM`, `MIDDLE` and `BASE` to Bedrock-specific widths and respects the vertical direction for tip height.
+
+
+## Runtime diagnostics
+
+Per-player debug mode includes movement-state probes that do not alter collision decisions. Powder-snow presence is logged only when the tracked state changes, while pose-change and failed-movement events capture the server-side pose, bounding box and related movement state. These probes exist to distinguish a real collision mismatch from a server/client pose transition mismatch.

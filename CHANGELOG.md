@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.4-SNAPSHOT
+
+- Added non-invasive runtime diagnostics for powder snow and player pose transitions.
+- Debug mode now logs powder-snow enter/exit state without changing movement behavior.
+- Debug mode now records every Bedrock `PlayerFailMoveEvent` with fail reason, target powder-snow presence, pose and bounding-box state.
+- Added Bedrock pose-change diagnostics with current/new pose, bounding-box dimensions, sneak/swim state and nearby powder snow or pointed dripstone.
+- Added player pose and bounding-box state to translated-collision debug decisions and accepted-movement corrections.
+- Confirmed through live Bedrock testing that `BAMBOO_SAPLING` remains pass-through and should stay outside the translated collision module.
+- Updated the project version to `0.2.4-SNAPSHOT`.
+
 ## 0.2.3-SNAPSHOT
 
 - Fixed false movement corrections while Bedrock players slide diagonally around bamboo and pointed dripstone.

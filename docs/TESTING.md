@@ -1,4 +1,4 @@
-# VoxelParity 0.2.3-SNAPSHOT test plan
+# VoxelParity 0.2.4-SNAPSHOT test plan
 
 Target environment:
 
@@ -36,10 +36,12 @@ Target environment:
 6. Confirm `age=0` no longer gets clipped against a `3/16` translated box and false Java rubberband is removed where the Bedrock client has legal space.
 7. Confirm diagonal movement around a free bamboo corner does not produce `outcome=CORRECT` when every `bedrockTargetOverlap` value is false.
 8. Confirm the player is still corrected when the reported target position actually ends inside the thin `2/16` or thick `3/16` Bedrock stalk box.
-9. Test `BAMBOO_SAPLING` separately and confirm VoxelParity currently leaves it untouched.
+9. Test `BAMBOO_SAPLING` separately and confirm it remains pass-through for Bedrock movement while VoxelParity leaves it untouched.
 10. When mature bamboo still catches the player, keep the `[debug-geometry]` lines for that exact attempt. They include block coordinates, block data, Java collision boxes, the calculated Bedrock box and target overlap flags.
 
 ## Bedrock pointed dripstone
+
+With debug enabled, keep any `[debug-pose]` lines if the player enters a crawl/swim-like pose under hanging dripstone. The line must show the current/new pose and the server-side player bounding box.
 
 Test each thickness where practical:
 
@@ -60,11 +62,14 @@ For upward and hanging tips:
 
 ## Powder snow
 
-1. Enter deep powder snow without leather boots.
-2. Attempt horizontal movement, sinking, jumping and escaping.
-3. Reproduce the original position-rubberband case if possible.
-4. Confirm corrected rejections log `outcome=ALLOW` from the powder-snow module.
-5. Repeat with leather boots and confirm VoxelParity does not bypass the intended Java collision rule.
+1. Enable per-player debug before entering the test area.
+2. Enter deep powder snow without leather boots and confirm a `[debug-snow]` transition records `ENTER` or `INSIDE`.
+3. Attempt horizontal movement, sinking, jumping and escaping.
+4. Reproduce the original position-rubberband case if possible.
+5. If Leaf emits a failed movement, retain the `[debug-failmove]` line and confirm whether `targetPowderSnow=true`.
+6. Confirm any corrected powder-snow rejection logs `outcome=ALLOW` from the powder-snow module.
+7. Leave the snow and confirm a `[debug-snow]` `EXIT` transition.
+8. Repeat with leather boots and confirm VoxelParity does not bypass the intended Java collision rule.
 
 ## Safety cases
 

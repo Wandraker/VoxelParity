@@ -6,6 +6,7 @@ import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
 import dev.onelsey.voxelparity.collision.paper.CollisionWorld;
 import dev.onelsey.voxelparity.collision.paper.PaperBoxes;
 import dev.onelsey.voxelparity.debug.DebugRegistry;
+import dev.onelsey.voxelparity.debug.MovementDebugProbe;
 import dev.onelsey.voxelparity.module.ModuleManager;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
 import java.util.List;
@@ -17,7 +18,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BoundingBox;
@@ -27,6 +30,7 @@ public final class MovementListener implements Listener {
     private final BedrockPlayerDetector detector;
     private final DebugRegistry debugRegistry;
     private final ModuleManager moduleManager;
+    private final MovementDebugProbe debugProbe;
 
     public MovementListener(
             JavaPlugin plugin,
@@ -38,16 +42,19 @@ public final class MovementListener implements Listener {
         this.detector = Objects.requireNonNull(detector, "detector");
         this.debugRegistry = Objects.requireNonNull(debugRegistry, "debugRegistry");
         this.moduleManager = Objects.requireNonNull(moduleManager, "moduleManager");
+        this.debugProbe = new MovementDebugProbe(plugin, debugRegistry);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onFailMove(PlayerFailMoveEvent event) {
-        if (event.isAllowed() || event.getFailReason() != PlayerFailMoveEvent.FailReason.CLIPPED_INTO_BLOCK) {
+        Player player = event.getPlayer();
+        if (!detector.isBedrockPlayer(player.getUniqueId())) {
             return;
         }
 
-        Player player = event.getPlayer();
-        if (!detector.isBedrockPlayer(player.getUniqueId())) {
+        debugProbe.logFailMove(event);
+
+        if (event.isAllowed() || event.getFailReason() != PlayerFailMoveEvent.FailReason.CLIPPED_INTO_BLOCK) {
             return;
         }
 
@@ -134,6 +141,7 @@ public final class MovementListener implements Listener {
 
         Aabb start = PaperBoxes.playerAt(player, event.getFrom());
         Aabb requestedTarget = PaperBoxes.playerAt(player, event.getTo());
+        debugProbe.observeMove(player, requestedTarget);
 
         Optional<Location> corrected = moduleManager.collisionParityService().correctAcceptedMove(
                 player,
@@ -149,6 +157,7 @@ public final class MovementListener implements Listener {
                                 + " from=" + format(event.getFrom())
                                 + " requested=" + format(event.getTo())
                                 + " corrected=" + format(location)
+                                + " " + debugProbe.describePlayerState(player)
                 );
                 logCollisionDiagnostics(
                         player,
@@ -169,6 +178,22 @@ public final class MovementListener implements Listener {
             }
             event.setTo(location);
         });
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPoseChange(EntityPoseChangeEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        if (!detector.isBedrockPlayer(player.getUniqueId())) {
+            return;
+        }
+        debugProbe.logPoseChange(player, event.getPose());
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        debugProbe.clear(event.getPlayer().getUniqueId());
     }
 
     private void logCollisionDiagnostics(
@@ -221,6 +246,7 @@ public final class MovementListener implements Listener {
                         + " reason=" + reason
                         + " from=" + format(from)
                         + " to=" + format(to)
+                        + " " + debugProbe.describePlayerState(player)
         );
     }
 

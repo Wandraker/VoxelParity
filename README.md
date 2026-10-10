@@ -6,7 +6,7 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.2.3-SNAPSHOT`
+Version: `0.2.4-SNAPSHOT`
 
 Implemented:
 
@@ -20,7 +20,7 @@ Implemented:
 - Entity, unrelated block and unloaded-chunk safety gates.
 - Deterministic geometry and movement unit tests.
 - GitHub Actions build on Java 25.
-- Per-player debug logging, translated-collision geometry traces and runtime counters.
+- Per-player debug logging, translated-collision geometry traces, powder-snow presence transitions, pose diagnostics and runtime counters.
 
 VoxelParity does not globally replace Java block collision shapes. Java players and mobs retain normal Java physics.
 
@@ -60,7 +60,7 @@ The translated collision layer works in both directions:
 1. When Java rejects a Bedrock move as clipped into a translated block, VoxelParity allows it only when the target no longer overlaps the Bedrock collision box and no unrelated collision is present.
 2. When Java accepts movement, VoxelParity corrects it only if the reported target player box itself overlaps a translated Bedrock collision box. A straight segment between two legal packet positions is not treated as proof of collision, which avoids false rubberbanding while sliding diagonally around thin blocks.
 
-Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `age=1` uses the thick stalk width of `3/16`. Both retain the deterministic Bedrock position offset. `BAMBOO_SAPLING` is intentionally not translated and remains a separate case.
+Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `age=1` uses the thick stalk width of `3/16`. Both retain the deterministic Bedrock position offset. `BAMBOO_SAPLING` is intentionally not translated; live Bedrock testing confirmed the sapling remains pass-through for player movement.
 
 ## Powder snow safety model
 
