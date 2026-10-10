@@ -145,14 +145,6 @@ public final class CollisionParityService {
         return translated.enabled(kind);
     }
 
-    public boolean bambooEnabled() {
-        return translated.bambooEnabled();
-    }
-
-    public boolean pointedDripstoneEnabled() {
-        return translated.pointedDripstoneEnabled();
-    }
-
     public CollisionMetrics.Snapshot metrics(TranslatedCollisionKind kind) {
         return metrics.snapshot(kind);
     }

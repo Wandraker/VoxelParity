@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- Refactored translated block handling into independent collision adapters.
+- Added dedicated bamboo and pointed-dripstone adapters behind a material-indexed registry.
+- Removed block-specific branching from the shared translated-collision registry.
+- Made enabled translated modules discoverable through the same collision-kind registry used by diagnostics and metrics.
+- Updated module counting to iterate registered translated collision kinds instead of hardcoding bamboo and pointed dripstone.
+- Added unit coverage for translated adapter registration and enabled-module state.
+- Preserved the validated 0.2.6 movement behavior, Bedrock geometry, pose-aware handling and safety gates.
+- Established the extension point that future reproducible Bedrock/Java collision mismatches can use without rewriting the shared resolver.
+
 ## 0.2.6
 
 - Split translated-collision metrics into independent bamboo and pointed-dripstone counters.

@@ -1,84 +1,54 @@
 package dev.onelsey.voxelparity.collision.paper;
 
-import dev.onelsey.voxelparity.collision.bedrock.BedrockBambooShape;
-import dev.onelsey.voxelparity.collision.bedrock.BedrockDripstoneShape;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.type.Bamboo;
-import org.bukkit.block.data.type.Speleothem;
 
 public final class TranslatedBlockCollision {
-    private final boolean bambooEnabled;
-    private final boolean pointedDripstoneEnabled;
+    private final Map<Material, TranslatedCollisionAdapter> adapters =
+            new EnumMap<>(Material.class);
+    private final EnumSet<TranslatedCollisionKind> enabledKinds =
+            EnumSet.noneOf(TranslatedCollisionKind.class);
 
     public TranslatedBlockCollision(boolean bambooEnabled, boolean pointedDripstoneEnabled) {
-        this.bambooEnabled = bambooEnabled;
-        this.pointedDripstoneEnabled = pointedDripstoneEnabled;
+        register(new BambooCollisionAdapter(), bambooEnabled);
+        register(new PointedDripstoneCollisionAdapter(), pointedDripstoneEnabled);
     }
 
     public Optional<TranslatedCollision> translation(Block block) {
-        BlockData data = block.getBlockData();
-
-        if (bambooEnabled && block.getType() == Material.BAMBOO) {
-            if (!(data instanceof Bamboo bamboo)) {
-                return Optional.empty();
-            }
-
-            return Optional.of(new TranslatedCollision(
-                    TranslatedCollisionKind.BAMBOO,
-                    BedrockBambooShape.worldBox(
-                            block.getX(),
-                            block.getY(),
-                            block.getZ(),
-                            BedrockBambooShape.fromJavaAge(bamboo.getAge())
-                    )
-            ));
-        }
-
-        if (!pointedDripstoneEnabled || block.getType() != Material.POINTED_DRIPSTONE) {
+        TranslatedCollisionAdapter adapter = adapters.get(block.getType());
+        if (adapter == null) {
             return Optional.empty();
         }
 
-        if (!(data instanceof Speleothem speleothem)) {
-            return Optional.empty();
-        }
-
-        BedrockDripstoneShape.Thickness thickness = switch (speleothem.getThickness()) {
-            case TIP -> BedrockDripstoneShape.Thickness.TIP;
-            case TIP_MERGE -> BedrockDripstoneShape.Thickness.TIP_MERGE;
-            case FRUSTUM -> BedrockDripstoneShape.Thickness.FRUSTUM;
-            case MIDDLE -> BedrockDripstoneShape.Thickness.MIDDLE;
-            case BASE -> BedrockDripstoneShape.Thickness.BASE;
-        };
-
-        boolean hanging = speleothem.getVerticalDirection() == BlockFace.DOWN;
-        return Optional.of(new TranslatedCollision(
-                TranslatedCollisionKind.POINTED_DRIPSTONE,
-                BedrockDripstoneShape.worldBox(
-                        block.getX(),
-                        block.getY(),
-                        block.getZ(),
-                        thickness,
-                        hanging
-                )
-        ));
+        return adapter.bedrockBox(block)
+                .map(box -> new TranslatedCollision(adapter.kind(), box));
     }
 
     public boolean enabled(TranslatedCollisionKind kind) {
-        return switch (kind) {
-            case BAMBOO -> bambooEnabled;
-            case POINTED_DRIPSTONE -> pointedDripstoneEnabled;
-        };
+        return enabledKinds.contains(kind);
     }
 
-    public boolean bambooEnabled() {
-        return bambooEnabled;
+    public Set<TranslatedCollisionKind> enabledKinds() {
+        return Set.copyOf(enabledKinds);
     }
 
-    public boolean pointedDripstoneEnabled() {
-        return pointedDripstoneEnabled;
+    private void register(TranslatedCollisionAdapter adapter, boolean enabled) {
+        if (!enabled) {
+            return;
+        }
+
+        TranslatedCollisionAdapter previous = adapters.put(adapter.material(), adapter);
+        if (previous != null) {
+            throw new IllegalStateException(
+                    "Duplicate translated collision adapter for " + adapter.material()
+            );
+        }
+
+        enabledKinds.add(adapter.kind());
     }
 }

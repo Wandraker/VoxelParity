@@ -6,7 +6,7 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.2.6`
+Version: `0.3.0`
 
 Implemented:
 
@@ -14,7 +14,7 @@ Implemented:
 - Powder-snow failed-movement correction.
 - Per-player bamboo collision parity with Bedrock thin/thick stalk geometry selected from the Java bamboo age.
 - Per-player pointed-dripstone collision parity with recent swimming/crawl pose transition handling.
-- Shared translated-collision resolver.
+- Adapter-based translated-collision registry for independently maintained parity modules.
 - Accepted Bedrock movement is corrected only when the reported target position actually ends inside a translated Bedrock collision box, unless a recent server-observed swimming/crawl transition proves the compact player box is clear.
 - Failed Java movement is bypassed only when Java collision overlaps but the translated Bedrock collision does not.
 - Entity, unrelated block and unloaded-chunk safety gates.

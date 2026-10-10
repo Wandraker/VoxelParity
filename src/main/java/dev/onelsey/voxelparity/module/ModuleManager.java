@@ -1,6 +1,7 @@
 package dev.onelsey.voxelparity.module;
 
 import dev.onelsey.voxelparity.collision.paper.CollisionParityService;
+import dev.onelsey.voxelparity.collision.paper.TranslatedCollisionKind;
 import dev.onelsey.voxelparity.movement.MovementModule;
 import dev.onelsey.voxelparity.module.powdersnow.PowderSnowModule;
 import java.util.List;
@@ -37,11 +38,10 @@ public final class ModuleManager {
                 count++;
             }
         }
-        if (collisionParityService.bambooEnabled()) {
-            count++;
-        }
-        if (collisionParityService.pointedDripstoneEnabled()) {
-            count++;
+        for (TranslatedCollisionKind kind : TranslatedCollisionKind.values()) {
+            if (collisionParityService.enabled(kind)) {
+                count++;
+            }
         }
         return count;
     }

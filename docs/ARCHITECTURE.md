@@ -24,7 +24,7 @@ VoxelParity corrects specific Bedrock-to-Java movement and collision mismatches 
 
 Powder snow remains a dedicated failed-movement module because its mismatch is state-oriented rather than a simple translated box.
 
-Bamboo and pointed dripstone are handled by `CollisionParityService`. Each translated block carries an explicit module kind so geometry, diagnostics and runtime metrics can be attributed independently. The target player box is evaluated against both the Java collision shape and the calculated Bedrock collision shape.
+Bamboo and pointed dripstone are handled by `CollisionParityService` through independent `TranslatedCollisionAdapter` implementations. `TranslatedBlockCollision` is a material-indexed adapter registry rather than a block-specific decision tree. Each translated block carries an explicit module kind so geometry, diagnostics and runtime metrics can be attributed independently. The target player box is evaluated against both the Java collision shape and the calculated Bedrock collision shape.
 
 A failed move is allowed only when:
 
@@ -59,7 +59,14 @@ The geometry and movement solver are independent from Bukkit:
 - `collision.bedrock.BedrockBambooShape`
 - `collision.bedrock.BedrockDripstoneShape`
 
-The Paper layer adapts Bukkit block data into those core types.
+The Paper layer adapts Bukkit block data into those core types. Block-specific translation is isolated behind:
+
+- `TranslatedCollisionAdapter`
+- `BambooCollisionAdapter`
+- `PointedDripstoneCollisionAdapter`
+- `TranslatedBlockCollision`
+
+Adding a future translated block should primarily require a new adapter and collision kind rather than changes to the shared movement resolver.
 
 ## Bamboo scope
 
