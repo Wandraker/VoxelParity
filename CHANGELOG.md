@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+- Added a hard spectator-mode bypass so VoxelParity never alters Bedrock movement while the player is in `SPECTATOR`.
+- Added debug-only diagnostics for ordinary Java block collision when a swimming Bedrock player receives `CLIPPED_INTO_BLOCK` and no translated collision module applies.
+- Swimming collision diagnostics report the exact block, block state, Java collision boxes, target overlap and swept overlap without loading chunks.
+- Rate-limited swimming collision dumps to keep per-player debug usable during repeated failed movement.
+- Added the current game mode to movement debug state.
+- Added unit coverage confirming that only spectator mode bypasses parity handling.
+- Preserved all validated bamboo, pointed-dripstone, powder-snow and pose-transition behavior from 0.3.0.
+
 ## 0.3.0
 
 - Refactored translated block handling into independent collision adapters.

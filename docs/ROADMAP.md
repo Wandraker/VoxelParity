@@ -13,6 +13,7 @@ Next:
 
 - Add new parity adapters only for reproducible Bedrock/Java mismatches.
 - Extend pose-aware handling only when additional real pose mismatches are reproduced.
+- Use ordinary Java collision traces to classify the newly reproduced Bedrock swimming failure before adding any new parity adapter.
 - Perform a dedicated Folia runtime validation pass.
 - Keep Leaf 26.3 as the primary runtime validation target for this line.
 

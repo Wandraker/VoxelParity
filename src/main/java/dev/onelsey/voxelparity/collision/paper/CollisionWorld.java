@@ -144,6 +144,54 @@ public final class CollisionWorld {
         return List.copyOf(diagnostics);
     }
 
+
+    public static JavaCollisionDiagnostics javaCollisionDiagnostics(
+            World world,
+            Aabb swept,
+            Aabb target,
+            TranslatedBlockCollision translated
+    ) {
+        List<JavaCollisionDiagnostic> diagnostics = new ArrayList<>();
+        boolean unloadedChunk = false;
+
+        BlockRange range = BlockRange.from(world, swept);
+        for (int x = range.minX(); x <= range.maxX(); x++) {
+            for (int z = range.minZ(); z <= range.maxZ(); z++) {
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                    unloadedChunk = true;
+                    continue;
+                }
+
+                for (int y = range.minY(); y <= range.maxY(); y++) {
+                    Block block = world.getBlockAt(x, y, z);
+                    if (!block.isCollidable() || translated.translation(block).isPresent()) {
+                        continue;
+                    }
+
+                    List<Aabb> javaBoxes = javaShapeBoxes(block);
+                    boolean targetOverlap = javaBoxes.stream().anyMatch(target::overlaps);
+                    boolean sweptOverlap = javaBoxes.stream().anyMatch(swept::overlaps);
+                    if (!targetOverlap && !sweptOverlap) {
+                        continue;
+                    }
+
+                    diagnostics.add(new JavaCollisionDiagnostic(
+                            block.getType().name(),
+                            block.getX(),
+                            block.getY(),
+                            block.getZ(),
+                            block.getBlockData().getAsString(),
+                            javaBoxes,
+                            targetOverlap,
+                            sweptOverlap
+                    ));
+                }
+            }
+        }
+
+        return new JavaCollisionDiagnostics(List.copyOf(diagnostics), unloadedChunk);
+    }
+
     private static boolean javaShapeOverlaps(Block block, Aabb target) {
         Collection<BoundingBox> local = block.getCollisionShape().getBoundingBoxes();
         for (BoundingBox box : local) {
@@ -226,6 +274,25 @@ public final class CollisionWorld {
             }
             return Set.copyOf(kinds);
         }
+    }
+
+
+    public record JavaCollisionDiagnostics(
+            List<JavaCollisionDiagnostic> blocks,
+            boolean unloadedChunkEncountered
+    ) {
+    }
+
+    public record JavaCollisionDiagnostic(
+            String material,
+            int x,
+            int y,
+            int z,
+            String blockData,
+            List<Aabb> javaBoxes,
+            boolean targetOverlap,
+            boolean sweptOverlap
+    ) {
     }
 
     public record TranslatedCollisionDiagnostic(

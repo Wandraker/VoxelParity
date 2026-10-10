@@ -55,6 +55,11 @@ public final class MovementListener implements Listener {
 
         debugProbe.logFailMove(event);
 
+        if (MovementPolicy.bypassParity(player.getGameMode())) {
+            poseTracker.clear(player.getUniqueId());
+            return;
+        }
+
         if (event.isAllowed() || event.getFailReason() != PlayerFailMoveEvent.FailReason.CLIPPED_INTO_BLOCK) {
             return;
         }
@@ -110,6 +115,21 @@ public final class MovementListener implements Listener {
                 to
         );
 
+        if (collisionDecision.outcome() == CollisionParityService.FailedMoveDecision.Outcome.ABSTAIN
+                && debugProbe.shouldLogSwimmingClip(player)) {
+            logJavaCollisionDiagnostics(
+                    player,
+                    fromAabb.union(target),
+                    target,
+                    CollisionWorld.javaCollisionDiagnostics(
+                            player.getWorld(),
+                            fromAabb.union(target),
+                            target,
+                            moduleManager.collisionParityService().translatedCollision()
+                    )
+            );
+        }
+
         if (debugRegistry.isEnabled(player.getUniqueId())
                 && compactTarget.isPresent()
                 && "recent-swimming-target-clear".equals(collisionDecision.reason())) {
@@ -153,6 +173,10 @@ public final class MovementListener implements Listener {
 
         Player player = event.getPlayer();
         if (!detector.isBedrockPlayer(player.getUniqueId())) {
+            return;
+        }
+        if (MovementPolicy.bypassParity(player.getGameMode())) {
+            poseTracker.clear(player.getUniqueId());
             return;
         }
 
@@ -226,14 +250,47 @@ public final class MovementListener implements Listener {
             return;
         }
 
-        poseTracker.observePoseChange(player, event.getPose());
         debugProbe.logPoseChange(player, event.getPose());
+        if (MovementPolicy.bypassParity(player.getGameMode())) {
+            poseTracker.clear(player.getUniqueId());
+            return;
+        }
+        poseTracker.observePoseChange(player, event.getPose());
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         debugProbe.clear(event.getPlayer().getUniqueId());
         poseTracker.clear(event.getPlayer().getUniqueId());
+    }
+
+
+    private void logJavaCollisionDiagnostics(
+            Player player,
+            Aabb swept,
+            Aabb target,
+            CollisionWorld.JavaCollisionDiagnostics diagnostics
+    ) {
+        plugin.getLogger().info(
+                "[debug-java-collision] player=" + player.getName()
+                        + " phase=SWIMMING_FAIL"
+                        + " target=" + format(target)
+                        + " swept=" + format(swept)
+                        + " blocks=" + diagnostics.blocks().size()
+                        + " unloadedChunk=" + diagnostics.unloadedChunkEncountered()
+        );
+
+        for (CollisionWorld.JavaCollisionDiagnostic diagnostic : diagnostics.blocks()) {
+            plugin.getLogger().info(
+                    "[debug-java-collision] player=" + player.getName()
+                            + " block=" + diagnostic.material()
+                            + " pos=" + diagnostic.x() + "," + diagnostic.y() + "," + diagnostic.z()
+                            + " data=" + diagnostic.blockData()
+                            + " javaBoxes=" + formatBoxes(diagnostic.javaBoxes())
+                            + " targetOverlap=" + diagnostic.targetOverlap()
+                            + " sweptOverlap=" + diagnostic.sweptOverlap()
+            );
+        }
     }
 
     private void logCollisionDiagnostics(

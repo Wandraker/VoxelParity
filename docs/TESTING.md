@@ -1,4 +1,4 @@
-# VoxelParity 0.2.5-SNAPSHOT test plan
+# VoxelParity 0.3.1 test plan
 
 Target environment:
 
@@ -73,6 +73,21 @@ For upward and hanging tips:
 6. Confirm any corrected powder-snow rejection logs `outcome=ALLOW` from the powder-snow module.
 7. Leave the snow and confirm a `[debug-snow]` `EXIT` transition.
 8. Repeat with leather boots and confirm VoxelParity does not bypass the intended Java collision rule.
+
+## Swimming collision diagnostics
+
+1. Enable per-player debug.
+2. Reproduce a Bedrock swimming movement that Leaf rejects with `CLIPPED_INTO_BLOCK` while no bamboo or pointed dripstone is involved.
+3. Keep the `[debug-java-collision]` lines.
+4. Confirm the dump identifies the ordinary collidable block, its block data and Java collision boxes.
+5. Do not treat the diagnostic output itself as permission to bypass that collision.
+
+## Spectator control
+
+1. Switch the Bedrock player to spectator mode.
+2. Move through translated blocks, powder snow and ordinary solid blocks.
+3. Confirm VoxelParity produces no `ALLOW`, `CORRECT` or module intervention for spectator movement.
+4. Any remaining spectator movement limitation is outside VoxelParity's movement handling.
 
 ## Safety cases
 

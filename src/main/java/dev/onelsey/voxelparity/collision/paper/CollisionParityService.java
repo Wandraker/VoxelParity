@@ -149,6 +149,10 @@ public final class CollisionParityService {
         return metrics.snapshot(kind);
     }
 
+    public TranslatedBlockCollision translatedCollision() {
+        return translated;
+    }
+
     private boolean compactPoseTargetIsSafe(Player player, Aabb compactTarget) {
         CollisionWorld.TargetScan compactScan =
                 CollisionWorld.scanTarget(player, compactTarget, translated);
