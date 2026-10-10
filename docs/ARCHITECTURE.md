@@ -12,7 +12,7 @@ VoxelParity corrects specific Bedrock-to-Java movement and collision mismatches 
 - VoxelParity does not load chunks while validating movement.
 - A rejected movement packet is never allowed when an unrelated solid or entity collision is present.
 - A Java collision false positive is bypassed only when the translated Bedrock collision proves the target is valid.
-- Removing a Java false positive must not remove the Bedrock-side obstacle; accepted movement is clipped against translated boxes.
+- Removing a Java false positive must not permit an accepted target position to end inside the translated Bedrock collision.
 
 ## Bedrock detection
 
@@ -38,7 +38,9 @@ A failed move is allowed only when:
 
 A per-player parity layer must also enforce Bedrock collision on movement that Java would otherwise accept.
 
-For Bedrock players, normal `PlayerMoveEvent` movement is checked against translated collision boxes inside the swept player bounds. `MotionResolver` clips movement axis-by-axis and returns the closest legal motion. Existing overlap is allowed to escape rather than trapping the player.
+For Bedrock players, normal `PlayerMoveEvent` movement gathers translated collision boxes from the local swept bounds, but correction is only activated when the reported target player box actually overlaps one of those Bedrock boxes. This distinction matters because two consecutive legal Bedrock packet positions do not imply that the client physically traversed the straight line between them; treating that line as authoritative produced visible corner rubberbanding around bamboo and pointed dripstone.
+
+When the target itself overlaps translated collision, `MotionResolver` clips movement axis-by-axis and returns the closest legal motion. Existing overlap is allowed to escape rather than trapping the player.
 
 Teleport events are excluded.
 
@@ -49,6 +51,7 @@ The geometry and movement solver are independent from Bukkit:
 - `collision.math.Aabb`
 - `collision.math.Motion`
 - `collision.math.MotionResolver`
+- `collision.math.AcceptedMoveGuard`
 - `collision.bedrock.BedrockOffsetPattern`
 - `collision.bedrock.BedrockBambooShape`
 - `collision.bedrock.BedrockDripstoneShape`

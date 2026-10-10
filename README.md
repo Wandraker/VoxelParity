@@ -6,7 +6,7 @@ The project is Leaf-first and currently targets Minecraft/Paper API 26.3 with Ja
 
 ## Current state
 
-Version: `0.2.2-SNAPSHOT`
+Version: `0.2.3-SNAPSHOT`
 
 Implemented:
 
@@ -15,7 +15,7 @@ Implemented:
 - Per-player bamboo collision parity with Bedrock thin/thick stalk geometry selected from the Java bamboo age.
 - Per-player pointed-dripstone collision parity.
 - Shared translated-collision resolver.
-- Normal movement clipping against Bedrock collision boxes to prevent pass-through exploits.
+- Accepted Bedrock movement is corrected only when the reported target position actually ends inside a translated Bedrock collision box.
 - Failed Java movement is bypassed only when Java collision overlaps but the translated Bedrock collision does not.
 - Entity, unrelated block and unloaded-chunk safety gates.
 - Deterministic geometry and movement unit tests.
@@ -58,7 +58,7 @@ Bamboo and pointed dripstone use Bedrock-specific world-space collision boxes. V
 The translated collision layer works in both directions:
 
 1. When Java rejects a Bedrock move as clipped into a translated block, VoxelParity allows it only when the target no longer overlaps the Bedrock collision box and no unrelated collision is present.
-2. When Java accepts movement, VoxelParity clips the move against the Bedrock collision box so the parity fix cannot become a noclip path.
+2. When Java accepts movement, VoxelParity corrects it only if the reported target player box itself overlaps a translated Bedrock collision box. A straight segment between two legal packet positions is not treated as proof of collision, which avoids false rubberbanding while sliding diagonally around thin blocks.
 
 Java `BAMBOO` with `age=0` uses the Bedrock thin stalk width of `2/16`, while `age=1` uses the thick stalk width of `3/16`. Both retain the deterministic Bedrock position offset. `BAMBOO_SAPLING` is intentionally not translated and remains a separate case.
 

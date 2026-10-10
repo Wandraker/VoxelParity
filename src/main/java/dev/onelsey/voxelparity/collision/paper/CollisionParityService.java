@@ -1,8 +1,8 @@
 package dev.onelsey.voxelparity.collision.paper;
 
 import dev.onelsey.voxelparity.collision.math.Aabb;
+import dev.onelsey.voxelparity.collision.math.AcceptedMoveGuard;
 import dev.onelsey.voxelparity.collision.math.Motion;
-import dev.onelsey.voxelparity.collision.math.MotionResolver;
 import dev.onelsey.voxelparity.collision.math.ResolvedMotion;
 import java.util.List;
 import java.util.Optional;
@@ -78,7 +78,7 @@ public final class CollisionParityService {
             return Optional.empty();
         }
 
-        ResolvedMotion resolved = MotionResolver.resolve(start, target, collisionBoxes.boxes());
+        ResolvedMotion resolved = AcceptedMoveGuard.resolve(start, target, collisionBoxes.boxes());
         if (!resolved.collided()) {
             return Optional.empty();
         }

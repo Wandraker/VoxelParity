@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3-SNAPSHOT
+
+- Fixed false movement corrections while Bedrock players slide diagonally around bamboo and pointed dripstone.
+- Accepted movement now triggers the translated-collision guard only when the reported target player box actually overlaps a Bedrock collision box.
+- Stopped treating a straight swept segment between two legal packet positions as proof that the Bedrock client crossed a collision box.
+- Added a regression fixture from the real pointed-dripstone runtime trace that previously produced a visible correction despite a legal target position.
+- Preserved failed-movement Java-versus-Bedrock mismatch handling and existing state-aware bamboo geometry.
+- Updated the project version to `0.2.3-SNAPSHOT`.
+
 ## 0.2.2-SNAPSHOT
 
 - Fixed Bedrock collision geometry for thin Java bamboo states.
